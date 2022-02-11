@@ -19,6 +19,11 @@ pub enum AppState {
     Win,
 }
 
+#[derive(SystemLabel, Debug, Clone, Hash, Eq, PartialEq)]
+enum Systems {
+    Vel,
+}
+
 #[derive(Debug)]
 pub struct GGRSConfig;
 impl Config for GGRSConfig {
@@ -39,7 +44,8 @@ fn main() {
             Schedule::default().with_stage(
                 ROLLBACK_SYSTEMS,
                 SystemStage::parallel()
-                    .with_system(move_players)
+                    .with_system(update_velocities.label(Systems::Vel))
+                    .with_system(move_players.after(Systems::Vel))
                     .with_system(increase_frame_count),
             ),
         )

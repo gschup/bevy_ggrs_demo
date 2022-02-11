@@ -114,11 +114,11 @@ pub fn increase_frame_count(mut frame_count: ResMut<FrameCount>) {
     frame_count.frame += 1;
 }
 
-pub fn move_players(
-    mut query: Query<(&mut Transform, &mut Velocity, &Player), With<Rollback>>,
+pub fn update_velocities(
+    mut query: Query<(&mut Velocity, &Player), With<Rollback>>,
     inputs: Res<Vec<(Input, InputStatus)>>,
 ) {
-    for (mut t, mut v, p) in query.iter_mut() {
+    for (mut v, p) in query.iter_mut() {
         let input = inputs[p.handle as usize].0.inp;
         // set velocity through key presses
         if input & INPUT_UP != 0 && input & INPUT_DOWN == 0 {
@@ -149,7 +149,11 @@ pub fn move_players(
             v.x *= factor;
             v.y *= factor;
         }
+    }
+}
 
+pub fn move_players(mut query: Query<(&mut Transform, &Velocity), With<Rollback>>) {
+    for (mut t, v) in query.iter_mut() {
         // apply velocity
         t.translation.x += v.x;
         t.translation.y += v.y;
