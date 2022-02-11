@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_ggrs::{Rollback, RollbackIdProvider};
+use bevy_ggrs::{Rollback, RollbackIdProvider, SessionType};
 use bytemuck::{Pod, Zeroable};
 use ggrs::{InputStatus, P2PSession, PlayerHandle};
 
@@ -102,8 +102,13 @@ pub fn stats(session: Res<P2PSession<GGRSConfig>>) {
     }
 }
 
-pub fn cleanup_round(mut commands: Commands) {
+pub fn cleanup_round(query: Query<Entity, With<Player>>, mut commands: Commands) {
     commands.remove_resource::<FrameCount>();
+    commands.remove_resource::<P2PSession<GGRSConfig>>();
+    commands.remove_resource::<SessionType>();
+    for e in query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
 }
 
 /*
