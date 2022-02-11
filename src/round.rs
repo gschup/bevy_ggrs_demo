@@ -155,9 +155,8 @@ pub fn move_players(
         t.translation.y += v.y;
 
         // constrain cube to plane
-        t.translation.x = t.translation.x.max(-1. * (PLANE_SIZE - CUBE_SIZE) * 0.5);
-        t.translation.x = t.translation.x.min((PLANE_SIZE - CUBE_SIZE) * 0.5);
-        t.translation.y = t.translation.y.max(-1. * (PLANE_SIZE - CUBE_SIZE) * 0.5);
-        t.translation.y = t.translation.y.min((PLANE_SIZE - CUBE_SIZE) * 0.5);
+        let bounds = (PLANE_SIZE - CUBE_SIZE) * 0.5;
+        t.translation.x = t.translation.x.clamp(-bounds, bounds);
+        t.translation.y = t.translation.y.clamp(-bounds, bounds);
     }
 }
