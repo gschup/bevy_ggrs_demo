@@ -67,7 +67,7 @@ fn main() {
                 .with_system(setup_round)
                 .with_system(spawn_players),
         )
-        .add_system_set(SystemSet::on_update(AppState::Round).with_system(stats))
+        .add_system_set(SystemSet::on_update(AppState::Round).with_system(print_events))
         .add_system_set(SystemSet::on_exit(AppState::Round).with_system(cleanup_round))
         .run();
 }

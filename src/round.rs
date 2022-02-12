@@ -98,11 +98,9 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
     }
 }
 
-pub fn stats(session: Res<P2PSession<GGRSConfig>>) {
-    for handle in 0..NUM_PLAYERS {
-        if let Ok(_stats) = session.as_ref().network_stats(handle) {
-            // TODO: display stats
-        }
+pub fn print_events(mut session: ResMut<P2PSession<GGRSConfig>>) {
+    for event in session.events() {
+        info!("GGRS Event: {:?}", event);
     }
 }
 
