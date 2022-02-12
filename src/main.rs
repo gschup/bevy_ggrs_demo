@@ -21,7 +21,7 @@ pub enum AppState {
 
 #[derive(SystemLabel, Debug, Clone, Hash, Eq, PartialEq)]
 enum Systems {
-    Vel,
+    Inp,
 }
 
 #[derive(Debug)]
@@ -44,8 +44,8 @@ fn main() {
             Schedule::default().with_stage(
                 ROLLBACK_SYSTEMS,
                 SystemStage::parallel()
-                    .with_system(update_velocities.label(Systems::Vel))
-                    .with_system(move_players.after(Systems::Vel))
+                    .with_system(apply_inputs.label(Systems::Inp))
+                    .with_system(move_players.after(Systems::Inp))
                     .with_system(increase_frame_count),
             ),
         )

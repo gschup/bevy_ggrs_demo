@@ -17,7 +17,8 @@ const GREEN: Color = Color::rgb(0.35, 0.7, 0.35);
 const PLAYER_COLORS: [Color; 4] = [BLUE, ORANGE, MAGENTA, GREEN];
 
 const PLAYER_SIZE: f32 = 50.;
-const MOVEMENT_SPEED: f32 = 5.0;
+const MOV_SPEED: f32 = 1.0;
+const ROT_SPEED: f32 = 0.05;
 const MAX_SPEED: f32 = 5.0;
 const FRICTION: f32 = 0.9;
 const PLANE_SIZE: f32 = 720.0;
@@ -78,9 +79,12 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
         let x = r * rot.cos();
         let y = r * rot.sin();
 
+        let mut transform = Transform::from_translation(Vec3::new(x, y, 0.));
+        transform.rotate(Quat::from_rotation_z(rot));
+
         commands
             .spawn_bundle(SpriteBundle {
-                transform: Transform::from_translation(Vec3::new(x, y, 0.)),
+                transform,
                 sprite: Sprite {
                     color: PLAYER_COLORS[handle],
                     custom_size: Some(Vec2::new(PLAYER_SIZE, PLAYER_SIZE)),
@@ -119,32 +123,39 @@ pub fn increase_frame_count(mut frame_count: ResMut<FrameCount>) {
     frame_count.frame += 1;
 }
 
-pub fn update_velocities(
-    mut query: Query<(&mut Velocity, &Player), With<Rollback>>,
+pub fn apply_inputs(
+    mut query: Query<(&mut Transform, &mut Velocity, &Player), With<Rollback>>,
     inputs: Res<Vec<(Input, InputStatus)>>,
 ) {
-    for (mut v, p) in query.iter_mut() {
-        let input = inputs[p.handle as usize].0.inp;
-        // set velocity through key presses
-        if input & INPUT_UP != 0 && input & INPUT_DOWN == 0 {
-            v.y = MOVEMENT_SPEED;
-        }
-        if input & INPUT_UP == 0 && input & INPUT_DOWN != 0 {
-            v.y = -MOVEMENT_SPEED;
-        }
+    for (mut t, mut v, p) in query.iter_mut() {
+        let input = match inputs[p.handle].1 {
+            InputStatus::Confirmed => inputs[p.handle].0.inp,
+            InputStatus::Predicted => inputs[p.handle].0.inp,
+            InputStatus::Disconnected => INPUT_LEFT, // disconnected players spin
+        };
+
+        // rotate left or right
         if input & INPUT_LEFT != 0 && input & INPUT_RIGHT == 0 {
-            v.x = -MOVEMENT_SPEED;
+            t.rotate(Quat::from_rotation_z(ROT_SPEED));
         }
         if input & INPUT_LEFT == 0 && input & INPUT_RIGHT != 0 {
-            v.x = MOVEMENT_SPEED;
+            t.rotate(Quat::from_rotation_z(-ROT_SPEED));
         }
 
-        // slow down
-        if input & INPUT_UP == 0 && input & INPUT_DOWN == 0 {
-            v.y *= FRICTION;
+        let (_, _, rot_z) = t.rotation.to_euler(EulerRot::XYZ);
+
+        // accelerate forward or backward or slow down if no acceleration is pressed
+        if input & INPUT_UP != 0 && input & INPUT_DOWN == 0 {
+            v.x += MOV_SPEED * rot_z.cos();
+            v.y += MOV_SPEED * rot_z.sin();
         }
-        if input & INPUT_LEFT == 0 && input & INPUT_RIGHT == 0 {
+        if input & INPUT_UP == 0 && input & INPUT_DOWN != 0 {
+            v.x -= MOV_SPEED * rot_z.cos();
+            v.y -= MOV_SPEED * rot_z.sin();
+        }
+        if input & INPUT_UP == 0 && input & INPUT_DOWN == 0 {
             v.x *= FRICTION;
+            v.y *= FRICTION;
         }
 
         // constrain velocity
