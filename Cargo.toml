@@ -9,10 +9,10 @@ edition = "2021"
 bevy = "0.6"
 bytemuck = {version="1.7.3", features= ["derive"]}
 matchbox_socket = { path = "../matchbox/matchbox_socket", features = ["ggrs-socket"] }
-ggrs = { git = "https://github.com/gschup/ggrs", features=["sync-send"]}
-bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs"}
+ggrs = { version = "0.9", features=["sync-send"]}
+bevy_ggrs = "0.9"
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-ggrs = { git = "https://github.com/gschup/ggrs", features=["sync-send", "wasm-bindgen"]}
-bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs", features=["wasm-bindgen"]}
+ggrs = { version = "0.9", features=["sync-send", "wasm-bindgen"]}
+bevy_ggrs = { version = "0.9", features=["wasm-bindgen"]}
