@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 bevy = "0.6"
 bytemuck = {version="1.7.3", features= ["derive"]}
-matchbox_socket = { path = "../matchbox/matchbox_socket", features = ["ggrs-socket"] }
+matchbox_socket = { git = "https://github.com/johanhelsing/matchbox", features = ["ggrs-socket"] }
 ggrs = { version = "0.9", features=["sync-send"]}
 bevy_ggrs = "0.9"
 log = "0.4"
