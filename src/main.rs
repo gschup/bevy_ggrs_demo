@@ -6,6 +6,7 @@ use crate::{connect::*, menu::*, round::*};
 use bevy::prelude::*;
 use bevy_ggrs::GGRSPlugin;
 use ggrs::Config;
+use approx::relative_eq;
 
 const NUM_PLAYERS: usize = 2;
 const FPS: usize = 60;
@@ -52,6 +53,7 @@ fn main() {
         .build(&mut app);
 
     app.add_plugins(DefaultPlugins)
+        .add_system(update_window_size)
         .add_state(AppState::Menu)
         // menu
         .add_system_set(SystemSet::on_enter(AppState::Menu).with_system(setup_menu))
@@ -70,4 +72,18 @@ fn main() {
         .add_system_set(SystemSet::on_update(AppState::Round).with_system(print_events))
         .add_system_set(SystemSet::on_exit(AppState::Round).with_system(cleanup_round))
         .run();
+}
+
+fn update_window_size(mut windows: ResMut<Windows>) {
+    // TODO: use window resize event instead of polling
+    let web_window = web_sys::window().unwrap();
+    let width = web_window.inner_width().unwrap().as_f64().unwrap() as f32 - 30.;
+    let height = web_window.inner_height().unwrap().as_f64().unwrap() as f32 - 30.;
+
+    let window = windows.get_primary_mut().unwrap();
+    if relative_eq!(width, window.width()) && relative_eq!(height, window.height()) {
+        return;
+    }
+
+    window.set_resolution(width, height);
 }

@@ -21,7 +21,7 @@ const MOV_SPEED: f32 = 1.0;
 const ROT_SPEED: f32 = 0.05;
 const MAX_SPEED: f32 = 5.0;
 const FRICTION: f32 = 0.9;
-const PLANE_SIZE: f32 = 720.0;
+const ARENA_SIZE: f32 = 720.0;
 const CUBE_SIZE: f32 = 0.2;
 
 #[repr(C)]
@@ -67,12 +67,21 @@ pub fn input(_handle: In<PlayerHandle>, keyboard_input: Res<bevy::input::Input<K
 }
 
 pub fn setup_round(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     commands.insert_resource(FrameCount::default());
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(SpriteBundle {
+        transform: Transform::from_xyz(0., 0., -1.),
+        sprite: Sprite {
+            color: Color::BLACK,
+            custom_size: Some(Vec2::new(ARENA_SIZE, ARENA_SIZE)),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
 }
 
 pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>) {
-    let r = PLANE_SIZE / 4.;
+    let r = ARENA_SIZE / 4.;
 
     for handle in 0..NUM_PLAYERS {
         let rot = handle as f32 / NUM_PLAYERS as f32 * 2. * std::f32::consts::PI;
@@ -173,7 +182,7 @@ pub fn move_players(mut query: Query<(&mut Transform, &Velocity), With<Rollback>
         t.translation.y += v.y;
 
         // constrain cube to plane
-        let bounds = (PLANE_SIZE - CUBE_SIZE) * 0.5;
+        let bounds = (ARENA_SIZE - CUBE_SIZE) * 0.5;
         t.translation.x = t.translation.x.clamp(-bounds, bounds);
         t.translation.y = t.translation.y.clamp(-bounds, bounds);
     }
