@@ -11,7 +11,7 @@ const INPUT_DELAY: usize = 2;
 
 pub fn setup_connect(mut commands: Commands, task_pool: Res<IoTaskPool>) {
     let room_id = "random";
-    let room_url = format!("{MATCHBOX_ADDR}/{room_id}");
+    let room_url = format!("{MATCHBOX_ADDR}/bevy_{room_id}");
     let (socket, message_loop) = WebRtcNonBlockingSocket::new(room_url);
     task_pool.spawn(message_loop).detach();
     commands.insert_resource(Some(socket));
