@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_ggrs::{Rollback, RollbackIdProvider, SessionType};
 use bytemuck::{Pod, Zeroable};
 use ggrs::{InputStatus, P2PSession, PlayerHandle};
@@ -17,10 +17,11 @@ const GREEN: Color = Color::rgb(0.35, 0.7, 0.35);
 const PLAYER_COLORS: [Color; 4] = [BLUE, ORANGE, MAGENTA, GREEN];
 
 const PLAYER_SIZE: f32 = 50.;
-const MOV_SPEED: f32 = 1.0;
+const MOV_SPEED: f32 = 0.5;
 const ROT_SPEED: f32 = 0.05;
-const MAX_SPEED: f32 = 5.0;
-const FRICTION: f32 = 0.9;
+const MAX_SPEED: f32 = 7.5;
+const FRICTION: f32 = 0.98;
+const DRIFT: f32 = 0.95;
 const ARENA_SIZE: f32 = 720.0;
 const CUBE_SIZE: f32 = 0.2;
 
@@ -36,10 +37,7 @@ pub struct Player {
 }
 
 #[derive(Default, Reflect, Component)]
-pub struct Velocity {
-    pub x: f32,
-    pub y: f32,
-}
+pub struct Velocity(Vec2);
 
 #[derive(Default, Reflect, Hash, Component)]
 #[reflect(Hash)]
@@ -70,7 +68,7 @@ pub fn setup_round(mut commands: Commands) {
     commands.insert_resource(FrameCount::default());
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     commands.spawn_bundle(SpriteBundle {
-        transform: Transform::from_xyz(0., 0., -1.),
+        transform: Transform::from_xyz(0., 0., 0.),
         sprite: Sprite {
             color: Color::BLACK,
             custom_size: Some(Vec2::new(ARENA_SIZE, ARENA_SIZE)),
@@ -88,7 +86,7 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
         let x = r * rot.cos();
         let y = r * rot.sin();
 
-        let mut transform = Transform::from_translation(Vec3::new(x, y, 0.));
+        let mut transform = Transform::from_translation(Vec3::new(x, y, 1.));
         transform.rotate(Quat::from_rotation_z(rot));
 
         commands
@@ -96,7 +94,7 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
                 transform,
                 sprite: Sprite {
                     color: PLAYER_COLORS[handle],
-                    custom_size: Some(Vec2::new(PLAYER_SIZE, PLAYER_SIZE)),
+                    custom_size: Some(Vec2::new(PLAYER_SIZE * 0.5, PLAYER_SIZE)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -134,52 +132,59 @@ pub fn apply_inputs(
     mut query: Query<(&mut Transform, &mut Velocity, &Player), With<Rollback>>,
     inputs: Res<Vec<(Input, InputStatus)>>,
 ) {
-    for (mut t, mut v, p) in query.iter_mut() {
+    for (mut transf, mut v, p) in query.iter_mut() {
         let input = match inputs[p.handle].1 {
             InputStatus::Confirmed => inputs[p.handle].0.inp,
             InputStatus::Predicted => inputs[p.handle].0.inp,
-            InputStatus::Disconnected => INPUT_LEFT, // disconnected players spin
+            InputStatus::Disconnected => 0, // disconnected players do nothing
         };
 
-        // rotate left or right
-        if input & INPUT_LEFT != 0 && input & INPUT_RIGHT == 0 {
-            t.rotate(Quat::from_rotation_z(ROT_SPEED));
-        }
-        if input & INPUT_LEFT == 0 && input & INPUT_RIGHT != 0 {
-            t.rotate(Quat::from_rotation_z(-ROT_SPEED));
-        }
+        let steer = if input & INPUT_LEFT != 0 && input & INPUT_RIGHT == 0 {
+            1.
+        } else if input & INPUT_LEFT == 0 && input & INPUT_RIGHT != 0 {
+            -1.
+        } else {
+            0.
+        };
 
-        let (_, _, rot_z) = t.rotation.to_euler(EulerRot::XYZ);
+        let accel = if input & INPUT_DOWN != 0 && input & INPUT_UP == 0 {
+            -1.
+        } else if input & INPUT_DOWN == 0 && input & INPUT_UP != 0 {
+            1.
+        } else {
+            0.
+        };
 
-        // accelerate forward or backward or slow down if no acceleration is pressed
-        if input & INPUT_UP != 0 && input & INPUT_DOWN == 0 {
-            v.x += MOV_SPEED * rot_z.cos();
-            v.y += MOV_SPEED * rot_z.sin();
-        }
-        if input & INPUT_UP == 0 && input & INPUT_DOWN != 0 {
-            v.x -= MOV_SPEED * rot_z.cos();
-            v.y -= MOV_SPEED * rot_z.sin();
-        }
-        if input & INPUT_UP == 0 && input & INPUT_DOWN == 0 {
-            v.x *= FRICTION;
-            v.y *= FRICTION;
+        let vel = &mut v.0;
+        let up = transf.up().xy();
+        let right = transf.right().xy();
+
+        // car drives forward / backward
+        *vel += (accel * MOV_SPEED) * up;
+
+        // rotate car
+        let rot = steer * ROT_SPEED * (vel.length() / MAX_SPEED);
+        transf.rotate(Quat::from_rotation_z(rot));
+
+        // very realistic tire friction
+        let forward_vel = up * vel.dot(up);
+        let right_vel = right * vel.dot(right);
+
+        *vel = forward_vel + right_vel * DRIFT;
+        if accel.abs() < 0.01 {
+            *vel *= FRICTION;
         }
 
         // constrain velocity
-        let mag = (v.x * v.x + v.y * v.y).sqrt();
-        if mag > MAX_SPEED {
-            let factor = MAX_SPEED / mag;
-            v.x *= factor;
-            v.y *= factor;
-        }
+        *vel = vel.clamp_length_max(MAX_SPEED);
     }
 }
 
 pub fn move_players(mut query: Query<(&mut Transform, &Velocity), With<Rollback>>) {
     for (mut t, v) in query.iter_mut() {
         // apply velocity
-        t.translation.x += v.x;
-        t.translation.y += v.y;
+        t.translation.x += v.0.x;
+        t.translation.y += v.0.y;
 
         // constrain cube to plane
         let bounds = (ARENA_SIZE - CUBE_SIZE) * 0.5;
