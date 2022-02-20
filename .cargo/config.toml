@@ -1,5 +1,5 @@
-[build]
-target = "wasm32-unknown-unknown"
+#[build]
+#target = "wasm32-unknown-unknown"
 
 [target.wasm32-unknown-unknown]
 runner = "wasm-server-runner"

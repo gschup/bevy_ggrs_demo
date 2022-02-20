@@ -1,6 +1,6 @@
-# [![GGRS LOGO](./ggrs_logo.png)](https://github.com/gschup/ggrs/)
+# [![GGRS LOGO](./assets/images/ggrs_logo.png)](https://github.com/gschup/ggrs/)
 
-## A demo of GGRS running in your browser
+## GGRS & Bevy Demo
 
 Currently not working with matchbox main branch.
 

@@ -3,7 +3,9 @@ use bevy_ggrs::{Rollback, RollbackIdProvider, SessionType};
 use bytemuck::{Pod, Zeroable};
 use ggrs::{InputStatus, P2PSession, PlayerHandle};
 
-use crate::{GGRSConfig, NUM_PLAYERS};
+use crate::{
+    checksum::Checksum, connect::LocalHandles, win::MatchData, AppState, GGRSConfig, NUM_PLAYERS,
+};
 
 const INPUT_UP: u8 = 0b0001;
 const INPUT_DOWN: u8 = 0b0010;
@@ -17,7 +19,7 @@ const GREEN: Color = Color::rgb(0.35, 0.7, 0.35);
 const PLAYER_COLORS: [Color; 4] = [BLUE, ORANGE, MAGENTA, GREEN];
 
 const PLAYER_SIZE: f32 = 50.;
-const MOV_SPEED: f32 = 0.5;
+const MOV_SPEED: f32 = 0.1;
 const ROT_SPEED: f32 = 0.05;
 const MAX_SPEED: f32 = 7.5;
 const FRICTION: f32 = 0.98;
@@ -36,8 +38,11 @@ pub struct Player {
     pub handle: usize,
 }
 
+#[derive(Component)]
+pub struct RoundEntity;
+
 #[derive(Default, Reflect, Component)]
-pub struct Velocity(Vec2);
+pub struct Velocity(pub Vec2);
 
 #[derive(Default, Reflect, Hash, Component)]
 #[reflect(Hash)]
@@ -45,20 +50,39 @@ pub struct FrameCount {
     pub frame: u32,
 }
 
-pub fn input(_handle: In<PlayerHandle>, keyboard_input: Res<bevy::input::Input<KeyCode>>) -> Input {
+pub fn input(
+    handle: In<PlayerHandle>,
+    keyboard_input: Res<bevy::input::Input<KeyCode>>,
+    local_handles: Res<LocalHandles>,
+) -> Input {
     let mut inp: u8 = 0;
 
-    if keyboard_input.pressed(KeyCode::W) {
-        inp |= INPUT_UP;
-    }
-    if keyboard_input.pressed(KeyCode::A) {
-        inp |= INPUT_LEFT;
-    }
-    if keyboard_input.pressed(KeyCode::S) {
-        inp |= INPUT_DOWN;
-    }
-    if keyboard_input.pressed(KeyCode::D) {
-        inp |= INPUT_RIGHT;
+    if handle.0 == local_handles.handles[0] {
+        if keyboard_input.pressed(KeyCode::W) {
+            inp |= INPUT_UP;
+        }
+        if keyboard_input.pressed(KeyCode::A) {
+            inp |= INPUT_LEFT;
+        }
+        if keyboard_input.pressed(KeyCode::S) {
+            inp |= INPUT_DOWN;
+        }
+        if keyboard_input.pressed(KeyCode::D) {
+            inp |= INPUT_RIGHT;
+        }
+    } else {
+        if keyboard_input.pressed(KeyCode::Up) {
+            inp |= INPUT_UP;
+        }
+        if keyboard_input.pressed(KeyCode::Left) {
+            inp |= INPUT_LEFT;
+        }
+        if keyboard_input.pressed(KeyCode::Down) {
+            inp |= INPUT_DOWN;
+        }
+        if keyboard_input.pressed(KeyCode::Right) {
+            inp |= INPUT_RIGHT;
+        }
     }
 
     Input { inp }
@@ -66,16 +90,20 @@ pub fn input(_handle: In<PlayerHandle>, keyboard_input: Res<bevy::input::Input<K
 
 pub fn setup_round(mut commands: Commands) {
     commands.insert_resource(FrameCount::default());
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(SpriteBundle {
-        transform: Transform::from_xyz(0., 0., 0.),
-        sprite: Sprite {
-            color: Color::BLACK,
-            custom_size: Some(Vec2::new(ARENA_SIZE, ARENA_SIZE)),
+    commands
+        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert(RoundEntity);
+    commands
+        .spawn_bundle(SpriteBundle {
+            transform: Transform::from_xyz(0., 0., 0.),
+            sprite: Sprite {
+                color: Color::BLACK,
+                custom_size: Some(Vec2::new(ARENA_SIZE, ARENA_SIZE)),
+                ..Default::default()
+            },
             ..Default::default()
-        },
-        ..Default::default()
-    });
+        })
+        .insert(RoundEntity);
 }
 
 pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>) {
@@ -101,20 +129,47 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
             })
             .insert(Player { handle })
             .insert(Velocity::default())
-            .insert(Rollback::new(rip.next_id()));
+            .insert(Checksum::default())
+            .insert(Rollback::new(rip.next_id()))
+            .insert(RoundEntity);
     }
 }
 
-pub fn print_events(mut session: ResMut<P2PSession<GGRSConfig>>) {
+pub fn print_p2p_events(mut session: ResMut<P2PSession<GGRSConfig>>) {
     for event in session.events() {
         info!("GGRS Event: {:?}", event);
     }
 }
 
-pub fn cleanup_round(query: Query<Entity, With<Player>>, mut commands: Commands) {
+pub fn check_win(
+    frame_count: Res<FrameCount>,
+    mut state: ResMut<State<AppState>>,
+    p2p_session: Option<Res<P2PSession<GGRSConfig>>>,
+    mut commands: Commands,
+) {
+    // dummy win condition
+    let win_frame = 3600;
+    let condition = frame_count.frame > win_frame;
+
+    let confirmed = match p2p_session {
+        Some(sess) => sess.confirmed_frame() > win_frame as i32,
+        None => true,
+    };
+
+    if condition && confirmed {
+        state.set(AppState::Win).expect("Could not change state.");
+        commands.insert_resource(MatchData {
+            result: "Orange won!".to_owned(),
+        });
+    }
+}
+
+pub fn cleanup_round(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) {
     commands.remove_resource::<FrameCount>();
+    commands.remove_resource::<LocalHandles>();
     commands.remove_resource::<P2PSession<GGRSConfig>>();
     commands.remove_resource::<SessionType>();
+
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }
@@ -162,21 +217,27 @@ pub fn apply_inputs(
         // car drives forward / backward
         *vel += (accel * MOV_SPEED) * up;
 
-        // rotate car
-        let rot = steer * ROT_SPEED * (vel.length() / MAX_SPEED);
-        transf.rotate(Quat::from_rotation_z(rot));
-
         // very realistic tire friction
         let forward_vel = up * vel.dot(up);
         let right_vel = right * vel.dot(right);
 
         *vel = forward_vel + right_vel * DRIFT;
-        if accel.abs() < 0.01 {
+        if accel.abs() <= 0.0 {
             *vel *= FRICTION;
         }
 
         // constrain velocity
         *vel = vel.clamp_length_max(MAX_SPEED);
+
+        // rotate car
+        let rot_factor = (vel.length() / MAX_SPEED).clamp(0.0, 1.0); // cannot rotate while standing still
+        let rot = if vel.dot(up) >= 0.0 {
+            steer * ROT_SPEED * rot_factor
+        } else {
+            // negate rotation while driving backwards
+            steer * ROT_SPEED * rot_factor * -1.0
+        };
+        transf.rotate(Quat::from_rotation_z(rot));
     }
 }
 
