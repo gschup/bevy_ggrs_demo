@@ -9,13 +9,13 @@ edition = "2021"
 bevy_asset_loader = "0.8"
 bevy = "0.6"
 bytemuck = {version="1.7.3", features= ["derive"]}
-ggrs = { git = "https://github.com/gschup/ggrs", features=["sync-send"] }
-bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs" }
-matchbox_socket = { path = "../matchbox/matchbox_socket", features = ["ggrs-socket"] }
+ggrs = { version = "0.9", features=["sync-send"] }
+bevy_ggrs = "0.9"
+matchbox_socket = { git = "https://github.com/johanhelsing/matchbox", branch = "fix-send-panic", features = ["ggrs-socket"] }
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-ggrs = {  git = "https://github.com/gschup/ggrs", features=["sync-send", "wasm-bindgen"]}
-bevy_ggrs = {  git = "https://github.com/gschup/bevy_ggrs", features=["wasm-bindgen"]}
+ggrs = {  version = "0.9", features=["sync-send", "wasm-bindgen"]}
+bevy_ggrs = { version = "0.9", features=["wasm-bindgen"]}
 approx = "0.5"
 web-sys = "0.3"
