@@ -8,7 +8,8 @@ use crate::{
     MAX_PREDICTION, NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON,
 };
 
-const MATCHBOX_ADDR: &str = "ws://127.0.0.1:3536";
+//const MATCHBOX_ADDR: &str = "ws://127.0.0.1:3536";
+const MATCHBOX_ADDR: &str = "wss://match.gschup.dev";
 
 #[derive(Component)]
 pub struct MenuConnectUI;

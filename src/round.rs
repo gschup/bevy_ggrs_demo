@@ -150,20 +150,9 @@ pub fn print_p2p_events(mut session: ResMut<P2PSession<GGRSConfig>>) {
     }
 }
 
-pub fn check_win(
-    frame_count: Res<FrameCount>,
-    mut state: ResMut<State<AppState>>,
-    p2p_session: Option<Res<P2PSession<GGRSConfig>>>,
-    mut commands: Commands,
-) {
-    // dummy win condition
-    let win_frame = 1800;
-    let condition = frame_count.frame > win_frame;
-
-    let confirmed = match p2p_session {
-        Some(sess) => sess.confirmed_frame() > win_frame as i32,
-        None => true,
-    };
+pub fn check_win(mut state: ResMut<State<AppState>>, mut commands: Commands) {
+    let condition = false;
+    let confirmed = false;
 
     if condition && confirmed {
         state.set(AppState::Win).expect("Could not change state.");
