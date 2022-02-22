@@ -11,8 +11,8 @@ use checksum::{checksum_players, Checksum};
 use ggrs::Config;
 use menu::connect::{create_matchbox_socket, update_matchbox_socket};
 use round::{
-    apply_inputs, check_win, cleanup_round, increase_frame_count, move_players, print_p2p_events,
-    setup_round, spawn_players, update_velocity, FrameCount, Velocity,
+    apply_inputs, check_win, increase_frame_count, move_players, print_p2p_events, setup_round,
+    spawn_players, update_velocity, FrameCount, Velocity,
 };
 
 const NUM_PLAYERS: usize = 2;
@@ -139,7 +139,9 @@ fn main() {
                 .with_system(menu::connect::btn_listeners),
         )
         .add_system_set(
-            SystemSet::on_exit(AppState::MenuConnect).with_system(menu::connect::cleanup_ui),
+            SystemSet::on_exit(AppState::MenuConnect)
+                .with_system(menu::connect::cleanup)
+                .with_system(menu::connect::cleanup_ui),
         )
         // win menu
         .add_system_set(SystemSet::on_enter(AppState::Win).with_system(menu::win::setup_ui))
@@ -156,7 +158,7 @@ fn main() {
                 .with_system(spawn_players),
         )
         .add_system_set(SystemSet::on_update(AppState::RoundLocal).with_system(check_win))
-        .add_system_set(SystemSet::on_exit(AppState::RoundLocal).with_system(cleanup_round))
+        .add_system_set(SystemSet::on_exit(AppState::RoundLocal).with_system(round::cleanup))
         // online round
         .add_system_set(
             SystemSet::on_enter(AppState::RoundOnline)
@@ -168,7 +170,7 @@ fn main() {
                 .with_system(print_p2p_events)
                 .with_system(check_win),
         )
-        .add_system_set(SystemSet::on_exit(AppState::RoundOnline).with_system(cleanup_round))
+        .add_system_set(SystemSet::on_exit(AppState::RoundOnline).with_system(round::cleanup))
         .run();
 }
 

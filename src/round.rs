@@ -173,7 +173,7 @@ pub fn check_win(
     }
 }
 
-pub fn cleanup_round(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) {
+pub fn cleanup(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) {
     commands.remove_resource::<FrameCount>();
     commands.remove_resource::<LocalHandles>();
     commands.remove_resource::<P2PSession<GGRSConfig>>();
