@@ -39,6 +39,7 @@ pub enum AppState {
 #[derive(SystemLabel, Debug, Clone, Hash, Eq, PartialEq)]
 enum SystemLabel {
     Input,
+    Velocity,
 }
 
 #[derive(AssetCollection)]
@@ -76,7 +77,12 @@ fn main() {
                     ROLLBACK_SYSTEMS,
                     SystemStage::parallel()
                         .with_system(apply_inputs.label(SystemLabel::Input))
-                        .with_system(move_players.after(SystemLabel::Input))
+                        .with_system(
+                            update_velocity
+                                .label(SystemLabel::Velocity)
+                                .after(SystemLabel::Input),
+                        )
+                        .with_system(move_players.after(SystemLabel::Velocity))
                         .with_system(increase_frame_count),
                 )
                 .with_stage_after(

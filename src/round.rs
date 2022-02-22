@@ -44,6 +44,12 @@ pub struct RoundEntity;
 #[derive(Default, Reflect, Component)]
 pub struct Velocity(pub Vec2);
 
+#[derive(Default, Reflect, Component)]
+pub struct CarControls {
+    accel: f32,
+    steer: f32,
+}
+
 #[derive(Default, Reflect, Hash, Component)]
 #[reflect(Hash)]
 pub struct FrameCount {
@@ -129,6 +135,7 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
             })
             .insert(Player { handle })
             .insert(Velocity::default())
+            .insert(CarControls::default())
             .insert(Checksum::default())
             .insert(Rollback::new(rip.next_id()))
             .insert(RoundEntity);
@@ -184,17 +191,17 @@ pub fn increase_frame_count(mut frame_count: ResMut<FrameCount>) {
 }
 
 pub fn apply_inputs(
-    mut query: Query<(&mut Transform, &mut Velocity, &Player), With<Rollback>>,
+    mut query: Query<(&mut CarControls, &Player)>,
     inputs: Res<Vec<(Input, InputStatus)>>,
 ) {
-    for (mut transf, mut v, p) in query.iter_mut() {
+    for (mut c, p) in query.iter_mut() {
         let input = match inputs[p.handle].1 {
             InputStatus::Confirmed => inputs[p.handle].0.inp,
             InputStatus::Predicted => inputs[p.handle].0.inp,
             InputStatus::Disconnected => 0, // disconnected players do nothing
         };
 
-        let steer = if input & INPUT_LEFT != 0 && input & INPUT_RIGHT == 0 {
+        c.steer = if input & INPUT_LEFT != 0 && input & INPUT_RIGHT == 0 {
             1.
         } else if input & INPUT_LEFT == 0 && input & INPUT_RIGHT != 0 {
             -1.
@@ -202,47 +209,54 @@ pub fn apply_inputs(
             0.
         };
 
-        let accel = if input & INPUT_DOWN != 0 && input & INPUT_UP == 0 {
+        c.accel = if input & INPUT_DOWN != 0 && input & INPUT_UP == 0 {
             -1.
         } else if input & INPUT_DOWN == 0 && input & INPUT_UP != 0 {
             1.
         } else {
             0.
         };
+    }
+}
 
+pub fn update_velocity(mut query: Query<(&mut Velocity, &Transform, &CarControls)>) {
+    for (mut v, t, c) in query.iter_mut() {
         let vel = &mut v.0;
-        let up = transf.up().xy();
-        let right = transf.right().xy();
+        let up = t.up().xy();
+        let right = t.right().xy();
 
         // car drives forward / backward
-        *vel += (accel * MOV_SPEED) * up;
+        *vel += (c.accel * MOV_SPEED) * up;
 
         // very realistic tire friction
         let forward_vel = up * vel.dot(up);
         let right_vel = right * vel.dot(right);
 
         *vel = forward_vel + right_vel * DRIFT;
-        if accel.abs() <= 0.0 {
+        if c.accel.abs() <= 0.0 {
             *vel *= FRICTION;
         }
 
         // constrain velocity
         *vel = vel.clamp_length_max(MAX_SPEED);
+    }
+}
+
+pub fn move_players(mut query: Query<(&mut Transform, &Velocity, &CarControls), With<Rollback>>) {
+    for (mut t, v, c) in query.iter_mut() {
+        let vel = &v.0;
+        let up = t.up().xy();
 
         // rotate car
         let rot_factor = (vel.length() / MAX_SPEED).clamp(0.0, 1.0); // cannot rotate while standing still
         let rot = if vel.dot(up) >= 0.0 {
-            steer * ROT_SPEED * rot_factor
+            c.steer * ROT_SPEED * rot_factor
         } else {
             // negate rotation while driving backwards
-            steer * ROT_SPEED * rot_factor * -1.0
+            c.steer * ROT_SPEED * rot_factor * -1.0
         };
-        transf.rotate(Quat::from_rotation_z(rot));
-    }
-}
+        t.rotate(Quat::from_rotation_z(rot));
 
-pub fn move_players(mut query: Query<(&mut Transform, &Velocity), With<Rollback>>) {
-    for (mut t, v) in query.iter_mut() {
         // apply velocity
         t.translation.x += v.0.x;
         t.translation.y += v.0.y;
