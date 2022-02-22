@@ -260,8 +260,8 @@ pub fn move_players(mut query: Query<(&mut Transform, &Velocity, &CarControls), 
         t.rotate(Quat::from_rotation_z(rot));
 
         // apply velocity
-        t.translation.x += v.0.x;
-        t.translation.y += v.0.y;
+        t.translation.x += vel.x;
+        t.translation.y += vel.y;
 
         // constrain cube to plane
         let bounds = (ARENA_SIZE - CUBE_SIZE) * 0.5;
