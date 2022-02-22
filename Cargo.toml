@@ -11,7 +11,7 @@ bevy = "0.6"
 bytemuck = {version="1.7.3", features= ["derive"]}
 ggrs = { version = "0.9", features=["sync-send"] }
 bevy_ggrs = "0.9"
-matchbox_socket = { git = "https://github.com/johanhelsing/matchbox", branch = "fix-send-panic", features = ["ggrs-socket"] }
+matchbox_socket = { git = "https://github.com/johanhelsing/matchbox", features = ["ggrs-socket"] }
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
