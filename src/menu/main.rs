@@ -1,30 +1,33 @@
-use bevy::prelude::*;
+use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::SessionType;
 use ggrs::{PlayerType, SessionBuilder};
 
 use crate::{
-    connect::LocalHandles, AppState, GGRSConfig, ImageAssets, CHECK_DISTANCE, FPS, HOVERED_BUTTON,
+    AppState, FontAssets, GGRSConfig, ImageAssets, CHECK_DISTANCE, FPS, HOVERED_BUTTON,
     INPUT_DELAY, MAX_PREDICTION, NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON, TEXT,
 };
 
-#[derive(Component)]
-pub struct MenuUI;
+use super::connect::LocalHandles;
 
 #[derive(Component)]
-pub struct OnlineMatchBtn;
+pub struct MenuMainUI;
 
 #[derive(Component)]
-pub struct LocalMatchBtn;
+pub enum MenuMainBtn {
+    OnlineMatch,
+    LocalMatch,
+    Quit,
+}
 
-pub fn setup_menu(
+pub fn setup_ui(
     mut commands: Commands,
     image_assets: Res<ImageAssets>,
-    asset_server: Res<AssetServer>,
+    font_assets: Res<FontAssets>,
 ) {
     // ui camera
     commands
         .spawn_bundle(UiCameraBundle::default())
-        .insert(MenuUI);
+        .insert(MenuMainUI);
 
     // root node
     commands
@@ -54,7 +57,8 @@ pub fn setup_menu(
                 image: image_assets.ggrs_logo.clone().into(),
                 ..Default::default()
             });
-            // quick match button
+
+            // online match button
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
@@ -73,7 +77,7 @@ pub fn setup_menu(
                         text: Text::with_section(
                             "Online",
                             TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font: font_assets.default_font.clone(),
                                 font_size: 40.0,
                                 color: TEXT,
                             },
@@ -82,7 +86,7 @@ pub fn setup_menu(
                         ..Default::default()
                     });
                 })
-                .insert(OnlineMatchBtn);
+                .insert(MenuMainBtn::OnlineMatch);
 
             // local mode button
             parent
@@ -103,7 +107,7 @@ pub fn setup_menu(
                         text: Text::with_section(
                             "Local",
                             TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font: font_assets.default_font.clone(),
                                 font_size: 40.0,
                                 color: TEXT,
                             },
@@ -112,25 +116,51 @@ pub fn setup_menu(
                         ..Default::default()
                     });
                 })
-                .insert(LocalMatchBtn);
+                .insert(MenuMainBtn::LocalMatch);
+
+            // quit button
+            parent
+                .spawn_bundle(ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: Rect::all(Val::Px(16.)),
+                        padding: Rect::all(Val::Px(16.)),
+                        ..Default::default()
+                    },
+                    color: NORMAL_BUTTON.into(),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn_bundle(TextBundle {
+                        text: Text::with_section(
+                            "Quit",
+                            TextStyle {
+                                font: font_assets.default_font.clone(),
+                                font_size: 40.0,
+                                color: TEXT,
+                            },
+                            Default::default(),
+                        ),
+                        ..Default::default()
+                    });
+                })
+                .insert(MenuMainBtn::Quit);
         })
-        .insert(MenuUI);
+        .insert(MenuMainUI);
 }
 
-pub fn update_online_match_btn(
-    mut state: ResMut<State<AppState>>,
+pub fn btn_visuals(
     mut interaction_query: Query<
         (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<OnlineMatchBtn>),
+        (Changed<Interaction>, With<MenuMainBtn>),
     >,
 ) {
     for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
                 *color = PRESSED_BUTTON.into();
-                state
-                    .set(AppState::Connect)
-                    .expect("Could not change state.");
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -142,30 +172,37 @@ pub fn update_online_match_btn(
     }
 }
 
-pub fn update_local_match_btn(
+pub fn btn_listeners(
+    mut exit: EventWriter<AppExit>,
     mut commands: Commands,
     mut state: ResMut<State<AppState>>,
-    mut interaction_query: Query<
-        (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<LocalMatchBtn>),
-    >,
+    mut interaction_query: Query<(&Interaction, &MenuMainBtn), Changed<Interaction>>,
 ) {
-    for (interaction, mut color) in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Clicked => {
-                *color = PRESSED_BUTTON.into();
-                create_synctest_session(&mut commands);
-                state
-                    .set(AppState::LocalRound)
-                    .expect("Could not change state.");
-            }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
+    for (interaction, btn) in interaction_query.iter_mut() {
+        if let Interaction::Clicked = *interaction {
+            match btn {
+                MenuMainBtn::OnlineMatch => {
+                    state
+                        .set(AppState::MenuOnline)
+                        .expect("Could not change state.");
+                }
+                MenuMainBtn::LocalMatch => {
+                    create_synctest_session(&mut commands);
+                    state
+                        .set(AppState::RoundLocal)
+                        .expect("Could not change state.");
+                }
+                MenuMainBtn::Quit => {
+                    exit.send(AppExit);
+                }
             }
         }
+    }
+}
+
+pub fn cleanup_ui(query: Query<Entity, With<MenuMainUI>>, mut commands: Commands) {
+    for e in query.iter() {
+        commands.entity(e).despawn_recursive();
     }
 }
 
@@ -191,10 +228,4 @@ fn create_synctest_session(commands: &mut Commands) {
     commands.insert_resource(LocalHandles {
         handles: (0..NUM_PLAYERS).collect(),
     });
-}
-
-pub fn cleanup_menu_ui(query: Query<Entity, With<MenuUI>>, mut commands: Commands) {
-    for e in query.iter() {
-        commands.entity(e).despawn_recursive();
-    }
 }

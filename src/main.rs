@@ -1,17 +1,19 @@
 mod checksum;
-mod connect;
 mod menu;
 mod round;
-mod win;
-
-use crate::{checksum::*, connect::*, menu::*, round::*, win::*};
-use bevy::prelude::*;
-use bevy_asset_loader::{AssetCollection, AssetLoader};
-use bevy_ggrs::GGRSPlugin;
-use ggrs::Config;
 
 #[cfg(target_arch = "wasm32")]
 use approx::relative_eq;
+use bevy::prelude::*;
+use bevy_asset_loader::{AssetCollection, AssetLoader};
+use bevy_ggrs::GGRSPlugin;
+use checksum::{checksum_players, Checksum};
+use ggrs::Config;
+use menu::connect::{create_matchbox_socket, update_matchbox_socket};
+use round::{
+    apply_inputs, check_win, cleanup_round, increase_frame_count, move_players, print_p2p_events,
+    setup_round, spawn_players, update_velocity, FrameCount, Velocity,
+};
 
 const NUM_PLAYERS: usize = 2;
 const FPS: usize = 60;
@@ -29,10 +31,11 @@ pub const TEXT: Color = Color::rgb(0.9, 0.9, 0.9);
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
     AssetLoading,
-    Menu,
-    Connect,
-    LocalRound,
-    OnlineRound,
+    MenuMain,
+    MenuOnline,
+    MenuConnect,
+    RoundLocal,
+    RoundOnline,
     Win,
 }
 
@@ -48,6 +51,12 @@ pub struct ImageAssets {
     pub ggrs_logo: Handle<Image>,
 }
 
+#[derive(AssetCollection)]
+pub struct FontAssets {
+    #[asset(path = "fonts/FiraSans-Bold.ttf")]
+    pub default_font: Handle<Font>,
+}
+
 #[derive(Debug)]
 pub struct GGRSConfig;
 impl Config for GGRSConfig {
@@ -60,13 +69,14 @@ fn main() {
     let mut app = App::new();
 
     AssetLoader::new(AppState::AssetLoading)
-        .continue_to_state(AppState::Menu)
+        .continue_to_state(AppState::MenuMain)
         .with_collection::<ImageAssets>()
+        .with_collection::<FontAssets>()
         .build(&mut app);
 
     GGRSPlugin::<GGRSConfig>::new()
         .with_update_frequency(FPS)
-        .with_input_system(input)
+        .with_input_system(round::input)
         .register_rollback_type::<Transform>()
         .register_rollback_type::<Velocity>()
         .register_rollback_type::<FrameCount>()
@@ -96,50 +106,69 @@ fn main() {
     app.add_plugins(DefaultPlugins)
         .add_system(update_window_size)
         .add_state(AppState::AssetLoading)
-        // menu
-        .add_system_set(SystemSet::on_enter(AppState::Menu).with_system(setup_menu))
+        // main menu
+        .add_system_set(SystemSet::on_enter(AppState::MenuMain).with_system(menu::main::setup_ui))
         .add_system_set(
-            SystemSet::on_update(AppState::Menu)
-                .with_system(update_online_match_btn)
-                .with_system(update_local_match_btn),
+            SystemSet::on_update(AppState::MenuMain)
+                .with_system(menu::main::btn_visuals)
+                .with_system(menu::main::btn_listeners),
         )
-        .add_system_set(SystemSet::on_exit(AppState::Menu).with_system(cleanup_menu_ui))
-        // connection
+        .add_system_set(SystemSet::on_exit(AppState::MenuMain).with_system(menu::main::cleanup_ui))
+        //online menu
         .add_system_set(
-            SystemSet::on_enter(AppState::Connect)
-                .with_system(setup_connect)
-                .with_system(setup_connect_ui),
+            SystemSet::on_enter(AppState::MenuOnline).with_system(menu::online::setup_ui),
         )
-        .add_system_set(SystemSet::on_update(AppState::Connect).with_system(connect))
         .add_system_set(
-            SystemSet::on_exit(AppState::Connect)
-                .with_system(create_ggrs_session)
-                .with_system(cleanup_connect_ui),
+            SystemSet::on_update(AppState::MenuOnline)
+                .with_system(menu::online::btn_visuals)
+                .with_system(menu::online::btn_listeners),
         )
+        .add_system_set(
+            SystemSet::on_exit(AppState::MenuOnline).with_system(menu::online::cleanup_ui),
+        )
+        // connect menu
+        .add_system_set(
+            SystemSet::on_enter(AppState::MenuConnect)
+                .with_system(create_matchbox_socket)
+                .with_system(menu::connect::setup_ui),
+        )
+        .add_system_set(
+            SystemSet::on_update(AppState::MenuConnect)
+                .with_system(update_matchbox_socket)
+                .with_system(menu::connect::btn_visuals)
+                .with_system(menu::connect::btn_listeners),
+        )
+        .add_system_set(
+            SystemSet::on_exit(AppState::MenuConnect).with_system(menu::connect::cleanup_ui),
+        )
+        // win menu
+        .add_system_set(SystemSet::on_enter(AppState::Win).with_system(menu::win::setup_ui))
+        .add_system_set(
+            SystemSet::on_update(AppState::Win)
+                .with_system(menu::win::btn_visuals)
+                .with_system(menu::win::btn_listeners),
+        )
+        .add_system_set(SystemSet::on_exit(AppState::Win).with_system(menu::win::cleanup_ui))
         // local round
         .add_system_set(
-            SystemSet::on_enter(AppState::LocalRound)
+            SystemSet::on_enter(AppState::RoundLocal)
                 .with_system(setup_round)
                 .with_system(spawn_players),
         )
-        .add_system_set(SystemSet::on_update(AppState::LocalRound).with_system(check_win))
-        .add_system_set(SystemSet::on_exit(AppState::LocalRound).with_system(cleanup_round))
+        .add_system_set(SystemSet::on_update(AppState::RoundLocal).with_system(check_win))
+        .add_system_set(SystemSet::on_exit(AppState::RoundLocal).with_system(cleanup_round))
         // online round
         .add_system_set(
-            SystemSet::on_enter(AppState::OnlineRound)
+            SystemSet::on_enter(AppState::RoundOnline)
                 .with_system(setup_round)
                 .with_system(spawn_players),
         )
         .add_system_set(
-            SystemSet::on_update(AppState::OnlineRound)
+            SystemSet::on_update(AppState::RoundOnline)
                 .with_system(print_p2p_events)
                 .with_system(check_win),
         )
-        .add_system_set(SystemSet::on_exit(AppState::OnlineRound).with_system(cleanup_round))
-        // win screen
-        .add_system_set(SystemSet::on_enter(AppState::Win).with_system(setup_win_ui))
-        .add_system_set(SystemSet::on_update(AppState::Win).with_system(update_cont_btn))
-        .add_system_set(SystemSet::on_exit(AppState::Win).with_system(cleanup_win_ui))
+        .add_system_set(SystemSet::on_exit(AppState::RoundOnline).with_system(cleanup_round))
         .run();
 }
 

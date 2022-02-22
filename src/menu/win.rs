@@ -1,22 +1,20 @@
 use bevy::prelude::*;
 
-use crate::{AppState, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, TEXT};
+use crate::{AppState, FontAssets, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, TEXT};
 
 #[derive(Component)]
 pub struct WinUI;
 
 #[derive(Component)]
-pub struct ContBtn;
+pub enum MenuWinBtn {
+    Back,
+}
 
 pub struct MatchData {
     pub result: String,
 }
 
-pub fn setup_win_ui(
-    mut commands: Commands,
-    match_data: Res<MatchData>,
-    asset_server: Res<AssetServer>,
-) {
+pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets: Res<FontAssets>) {
     // ui camera
     commands
         .spawn_bundle(UiCameraBundle::default())
@@ -49,7 +47,7 @@ pub fn setup_win_ui(
                 text: Text::with_section(
                     match_data.result.clone(),
                     TextStyle {
-                        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                        font: font_assets.default_font.clone(),
                         font_size: 96.,
                         color: TEXT,
                     },
@@ -76,7 +74,7 @@ pub fn setup_win_ui(
                         text: Text::with_section(
                             "Back to Menu",
                             TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font: font_assets.default_font.clone(),
                                 font_size: 40.0,
                                 color: TEXT,
                             },
@@ -85,25 +83,23 @@ pub fn setup_win_ui(
                         ..Default::default()
                     });
                 })
-                .insert(ContBtn);
+                .insert(MenuWinBtn::Back);
         })
         .insert(WinUI);
 
     commands.remove_resource::<MatchData>();
 }
 
-pub fn update_cont_btn(
-    mut state: ResMut<State<AppState>>,
+pub fn btn_visuals(
     mut interaction_query: Query<
         (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<ContBtn>),
+        (Changed<Interaction>, With<MenuWinBtn>),
     >,
 ) {
     for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
                 *color = PRESSED_BUTTON.into();
-                state.set(AppState::Menu).expect("Could not change state.");
             }
             Interaction::Hovered => {
                 *color = HOVERED_BUTTON.into();
@@ -115,7 +111,24 @@ pub fn update_cont_btn(
     }
 }
 
-pub fn cleanup_win_ui(query: Query<Entity, With<WinUI>>, mut commands: Commands) {
+pub fn btn_listeners(
+    mut state: ResMut<State<AppState>>,
+    mut interaction_query: Query<(&Interaction, &MenuWinBtn), Changed<Interaction>>,
+) {
+    for (interaction, btn) in interaction_query.iter_mut() {
+        if let Interaction::Clicked = *interaction {
+            match btn {
+                MenuWinBtn::Back => {
+                    state
+                        .set(AppState::MenuMain)
+                        .expect("Could not change state.");
+                }
+            }
+        }
+    }
+}
+
+pub fn cleanup_ui(query: Query<Entity, With<WinUI>>, mut commands: Commands) {
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }

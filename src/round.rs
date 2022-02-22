@@ -4,7 +4,9 @@ use bytemuck::{Pod, Zeroable};
 use ggrs::{InputStatus, P2PSession, PlayerHandle};
 
 use crate::{
-    checksum::Checksum, connect::LocalHandles, win::MatchData, AppState, GGRSConfig, NUM_PLAYERS,
+    checksum::Checksum,
+    menu::{connect::LocalHandles, win::MatchData},
+    AppState, GGRSConfig, NUM_PLAYERS,
 };
 
 const INPUT_UP: u8 = 0b0001;
@@ -155,7 +157,7 @@ pub fn check_win(
     mut commands: Commands,
 ) {
     // dummy win condition
-    let win_frame = 3600;
+    let win_frame = 1800;
     let condition = frame_count.frame > win_frame;
 
     let confirmed = match p2p_session {
