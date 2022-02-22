@@ -219,8 +219,8 @@ pub fn apply_inputs(
     }
 }
 
-pub fn update_velocity(mut query: Query<(&mut Velocity, &Transform, &CarControls)>) {
-    for (mut v, t, c) in query.iter_mut() {
+pub fn update_velocity(mut query: Query<(&Transform, &mut Velocity, &CarControls)>) {
+    for (t, mut v, c) in query.iter_mut() {
         let vel = &mut v.0;
         let up = t.up().xy();
         let right = t.right().xy();
