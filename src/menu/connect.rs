@@ -4,8 +4,8 @@ use ggrs::{PlayerHandle, PlayerType, SessionBuilder};
 use matchbox_socket::WebRtcSocket;
 
 use crate::{
-    AppState, FontAssets, GGRSConfig, FPS, HOVERED_BUTTON, INPUT_DELAY, MAX_PREDICTION,
-    NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON, TEXT,
+    AppState, FontAssets, GGRSConfig, BUTTON_TEXT, FPS, HOVERED_BUTTON, INPUT_DELAY,
+    MAX_PREDICTION, NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON,
 };
 
 const MATCHBOX_ADDR: &str = "ws://127.0.0.1:3536";
@@ -96,7 +96,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                     TextStyle {
                         font: font_assets.default_font.clone(),
                         font_size: 32.,
-                        color: TEXT,
+                        color: BUTTON_TEXT,
                     },
                     Default::default(),
                 ),
@@ -124,7 +124,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),

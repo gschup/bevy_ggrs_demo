@@ -3,8 +3,8 @@ use bevy_ggrs::SessionType;
 use ggrs::{PlayerType, SessionBuilder};
 
 use crate::{
-    AppState, FontAssets, GGRSConfig, ImageAssets, CHECK_DISTANCE, FPS, HOVERED_BUTTON,
-    INPUT_DELAY, MAX_PREDICTION, NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON, TEXT,
+    AppState, FontAssets, GGRSConfig, ImageAssets, BUTTON_TEXT, CHECK_DISTANCE, FPS,
+    HOVERED_BUTTON, INPUT_DELAY, MAX_PREDICTION, NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON,
 };
 
 use super::connect::LocalHandles;
@@ -79,7 +79,7 @@ pub fn setup_ui(
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),
@@ -109,7 +109,7 @@ pub fn setup_ui(
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),
@@ -139,7 +139,7 @@ pub fn setup_ui(
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),

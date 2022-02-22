@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{AppState, FontAssets, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, TEXT};
+use crate::{AppState, FontAssets, BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 
 #[derive(Component)]
 pub struct WinUI;
@@ -49,7 +49,7 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
                     TextStyle {
                         font: font_assets.default_font.clone(),
                         font_size: 96.,
-                        color: TEXT,
+                        color: BUTTON_TEXT,
                     },
                     Default::default(),
                 ),
@@ -76,7 +76,7 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),

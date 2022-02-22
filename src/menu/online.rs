@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{AppState, FontAssets, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, TEXT};
+use crate::{AppState, FontAssets, BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 
 use super::connect::ConnectData;
 
@@ -49,7 +49,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                     TextStyle {
                         font: font_assets.default_font.clone(),
                         font_size: 32.,
-                        color: TEXT,
+                        color: BUTTON_TEXT,
                     },
                     Default::default(),
                 ),
@@ -77,7 +77,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),
@@ -107,7 +107,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),
@@ -137,7 +137,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                             TextStyle {
                                 font: font_assets.default_font.clone(),
                                 font_size: 40.0,
-                                color: TEXT,
+                                color: BUTTON_TEXT,
                             },
                             Default::default(),
                         ),
