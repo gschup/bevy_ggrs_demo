@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{AppState, FontAssets, BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
+use crate::{
+    AppState, FontAssets, BUTTON_TEXT, DISABLED_BUTTON, HOVERED_BUTTON, NORMAL_BUTTON,
+    PRESSED_BUTTON,
+};
 
 use super::connect::ConnectData;
 
@@ -14,7 +17,17 @@ pub enum MenuOnlineBtn {
     Back,
 }
 
+#[derive(Component)]
+pub struct ButtonEnabled(bool);
+
+#[derive(Component)]
+pub struct LobbyCodeText;
+
+pub struct LobbyID(String);
+
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
+    // lobby id resource
+    commands.insert_resource(LobbyID("".to_owned()));
     // ui camera
     commands
         .spawn_bundle(UiCameraBundle::default())
@@ -37,24 +50,38 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             ..Default::default()
         })
         .with_children(|parent| {
-            // lobby id display
-            parent.spawn_bundle(TextBundle {
-                style: Style {
-                    align_self: AlignSelf::Center,
-                    justify_content: JustifyContent::Center,
-                    ..Default::default()
-                },
-                text: Text::with_section(
-                    "Enter a 4-digit ID!",
-                    TextStyle {
-                        font: font_assets.default_font.clone(),
-                        font_size: 32.,
-                        color: BUTTON_TEXT,
+            // lobby id text
+            parent
+                .spawn_bundle(TextBundle {
+                    style: Style {
+                        align_self: AlignSelf::Center,
+                        justify_content: JustifyContent::Center,
+                        ..Default::default()
                     },
-                    Default::default(),
-                ),
-                ..Default::default()
-            });
+                    text: Text {
+                        sections: vec![
+                            TextSection {
+                                value: "Enter a 4-digit ID!\n".to_owned(),
+                                style: TextStyle {
+                                    font: font_assets.default_font.clone(),
+                                    font_size: 40.0,
+                                    color: BUTTON_TEXT,
+                                },
+                            },
+                            TextSection {
+                                value: "".to_owned(),
+                                style: TextStyle {
+                                    font: font_assets.default_font.clone(),
+                                    font_size: 40.0,
+                                    color: BUTTON_TEXT,
+                                },
+                            },
+                        ],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .insert(LobbyCodeText);
 
             // lobby match button
             parent
@@ -84,7 +111,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         ..Default::default()
                     });
                 })
-                .insert(MenuOnlineBtn::LobbyMatch);
+                .insert(MenuOnlineBtn::LobbyMatch)
+                .insert(ButtonEnabled(false));
 
             // quick match button
             parent
@@ -149,23 +177,75 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .insert(MenuOnlineUI);
 }
 
+pub fn update_lobby_id(
+    mut char_evr: EventReader<ReceivedCharacter>,
+    keys: Res<Input<KeyCode>>,
+    mut lobby_id: ResMut<LobbyID>,
+) {
+    let lid = &mut lobby_id.0;
+    for ev in char_evr.iter() {
+        if lid.len() < 4 && ev.char.is_ascii_digit() {
+            lid.push(ev.char);
+        }
+    }
+    if keys.just_pressed(KeyCode::Back) {
+        let mut chars = lid.chars();
+        chars.next_back();
+        *lid = chars.as_str().to_owned();
+    }
+}
+
+pub fn update_lobby_id_display(
+    mut query: Query<&mut Text, With<LobbyCodeText>>,
+    lobby_id: ResMut<LobbyID>,
+) {
+    for mut text in query.iter_mut() {
+        text.sections[1].value = lobby_id.0.clone();
+    }
+}
+
+pub fn update_lobby_btn(
+    text_query: Query<&Text, With<LobbyCodeText>>,
+    mut btn_query: Query<&mut ButtonEnabled, With<MenuOnlineBtn>>,
+) {
+    let mut lobby_id_complete = false;
+    for text in text_query.iter() {
+        if text.sections[1].value.len() == 4 {
+            lobby_id_complete = true;
+            break;
+        }
+    }
+
+    for mut enabled in btn_query.iter_mut() {
+        enabled.0 = lobby_id_complete;
+    }
+}
+
 pub fn btn_visuals(
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<MenuOnlineBtn>),
+        (&Interaction, &mut UiColor, Option<&ButtonEnabled>),
+        With<MenuOnlineBtn>,
     >,
 ) {
-    for (interaction, mut color) in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Clicked => {
-                *color = PRESSED_BUTTON.into();
+    for (interaction, mut color, enabled) in interaction_query.iter_mut() {
+        let changeable = match enabled {
+            Some(e) => e.0,
+            None => true,
+        };
+        if changeable {
+            match *interaction {
+                Interaction::Clicked => {
+                    *color = PRESSED_BUTTON.into();
+                }
+                Interaction::Hovered => {
+                    *color = HOVERED_BUTTON.into();
+                }
+                Interaction::None => {
+                    *color = NORMAL_BUTTON.into();
+                }
             }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-            }
+        } else {
+            *color = DISABLED_BUTTON.into();
         }
     }
 }
@@ -173,14 +253,27 @@ pub fn btn_visuals(
 pub fn btn_listeners(
     mut commands: Commands,
     mut state: ResMut<State<AppState>>,
-    mut interaction_query: Query<(&Interaction, &MenuOnlineBtn), Changed<Interaction>>,
+    lobby_id: Res<LobbyID>,
+    mut interaction_query: Query<
+        (&Interaction, &MenuOnlineBtn, Option<&ButtonEnabled>),
+        Changed<Interaction>,
+    >,
 ) {
-    for (interaction, btn) in interaction_query.iter_mut() {
+    for (interaction, btn, enabled) in interaction_query.iter_mut() {
+        let clickable = match enabled {
+            Some(e) => e.0,
+            None => true,
+        };
+
+        if !clickable {
+            continue;
+        }
+
         if let Interaction::Clicked = *interaction {
             match btn {
                 MenuOnlineBtn::LobbyMatch => {
                     commands.insert_resource(ConnectData {
-                        lobby_id: "fighter?next=2".to_owned(),
+                        lobby_id: format!("{}", lobby_id.0),
                     });
                     state
                         .set(AppState::MenuConnect)

@@ -9,7 +9,10 @@ use bevy_asset_loader::{AssetCollection, AssetLoader};
 use bevy_ggrs::GGRSPlugin;
 use checksum::{checksum_players, Checksum};
 use ggrs::Config;
-use menu::connect::{create_matchbox_socket, update_matchbox_socket};
+use menu::{
+    connect::{create_matchbox_socket, update_matchbox_socket},
+    online::{update_lobby_btn, update_lobby_id, update_lobby_id_display},
+};
 use round::{
     apply_inputs, check_win, increase_frame_count, move_players, print_p2p_events, setup_round,
     spawn_players, update_velocity, FrameCount, Velocity,
@@ -23,10 +26,11 @@ const MAX_PREDICTION: usize = 12;
 const INPUT_DELAY: usize = 2;
 const CHECK_DISTANCE: usize = 2;
 
+const DISABLED_BUTTON: Color = Color::rgb(0.8, 0.5, 0.5);
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
-pub const BUTTON_TEXT: Color = Color::rgb(0.9, 0.9, 0.9);
+const BUTTON_TEXT: Color = Color::rgb(0.9, 0.9, 0.9);
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
@@ -120,6 +124,9 @@ fn main() {
         )
         .add_system_set(
             SystemSet::on_update(AppState::MenuOnline)
+                .with_system(update_lobby_id)
+                .with_system(update_lobby_id_display)
+                .with_system(update_lobby_btn)
                 .with_system(menu::online::btn_visuals)
                 .with_system(menu::online::btn_listeners),
         )
