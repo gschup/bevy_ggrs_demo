@@ -92,7 +92,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                     ..Default::default()
                 },
                 text: Text::with_section(
-                    "wagga wagga",
+                    "Searching a match...",
                     TextStyle {
                         font: font_assets.default_font.clone(),
                         font_size: 32.,
