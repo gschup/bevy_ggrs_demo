@@ -17,5 +17,5 @@ log = "0.4"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 ggrs = {  version = "0.9", features=["sync-send", "wasm-bindgen"]}
 bevy_ggrs = { version = "0.9", features=["wasm-bindgen"]}
-approx = "0.5"
+bevy-web-resizer = "0.1.0"
 web-sys = "0.3"

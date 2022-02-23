@@ -2,8 +2,6 @@ mod checksum;
 mod menu;
 mod round;
 
-#[cfg(target_arch = "wasm32")]
-use approx::relative_eq;
 use bevy::prelude::*;
 use bevy_asset_loader::{AssetCollection, AssetLoader};
 use bevy_ggrs::GGRSPlugin;
@@ -107,8 +105,12 @@ fn main() {
         )
         .build(&mut app);
 
+    #[cfg(target_arch = "wasm32")]
+    {
+        app.add_system(bevy_web_resizer::web_resize_system);
+    }
+
     app.add_plugins(DefaultPlugins)
-        .add_system(update_window_size)
         .add_state(AppState::AssetLoading)
         // main menu
         .add_system_set(SystemSet::on_enter(AppState::MenuMain).with_system(menu::main::setup_ui))
@@ -179,22 +181,4 @@ fn main() {
         )
         .add_system_set(SystemSet::on_exit(AppState::RoundOnline).with_system(round::cleanup))
         .run();
-}
-
-#[allow(unused_variables, unused_mut)]
-fn update_window_size(mut windows: ResMut<Windows>) {
-    // TODO: use window resize event instead of polling
-    #[cfg(target_arch = "wasm32")]
-    {
-        let web_window = web_sys::window().unwrap();
-        let width = web_window.inner_width().unwrap().as_f64().unwrap() as f32 - 30.;
-        let height = web_window.inner_height().unwrap().as_f64().unwrap() as f32 - 30.;
-        let window = windows.get_primary_mut().unwrap();
-
-        if relative_eq!(width, window.width()) && relative_eq!(height, window.height()) {
-            return;
-        }
-
-        window.set_resolution(width, height);
-    }
 }
