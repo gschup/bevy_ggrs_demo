@@ -105,11 +105,6 @@ fn main() {
         )
         .build(&mut app);
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        app.add_system(bevy_web_resizer::web_resize_system);
-    }
-
     app.add_plugins(DefaultPlugins)
         .add_state(AppState::AssetLoading)
         // main menu
@@ -179,6 +174,12 @@ fn main() {
                 .with_system(print_p2p_events)
                 .with_system(check_win),
         )
-        .add_system_set(SystemSet::on_exit(AppState::RoundOnline).with_system(round::cleanup))
-        .run();
+        .add_system_set(SystemSet::on_exit(AppState::RoundOnline).with_system(round::cleanup));
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        app.add_system(bevy_web_resizer::web_resize_system);
+    }
+
+    app.run();
 }
