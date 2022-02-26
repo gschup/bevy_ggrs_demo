@@ -1,8 +1,8 @@
 # [![GGRS LOGO](./assets/images/ggrs_logo.png)](https://github.com/gschup/ggrs/)
 
-## GGRS & Bevy Demo
+## GGRS & Matchbox & Bevy Demo
 
-Currently not working with matchbox main branch.
+WIP, but basic functionality should work!
 
 ## Licensing
 
