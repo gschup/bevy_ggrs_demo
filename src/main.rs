@@ -3,8 +3,8 @@ mod menu;
 mod round;
 
 use bevy::prelude::*;
-use bevy_asset_loader::{AssetCollection, AssetLoader};
-use bevy_ggrs::GGRSPlugin;
+use bevy_asset_loader::prelude::*;
+use bevy_ggrs::{GGRSPlugin, GGRSSchedule};
 use checksum::{checksum_players, Checksum};
 use ggrs::Config;
 use menu::{
@@ -30,8 +30,9 @@ const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 const BUTTON_TEXT: Color = Color::rgb(0.9, 0.9, 0.9);
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(States, Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub enum AppState {
+    #[default]
     AssetLoading,
     MenuMain,
     MenuOnline,
@@ -41,19 +42,19 @@ pub enum AppState {
     Win,
 }
 
-#[derive(SystemLabel, Debug, Clone, Hash, Eq, PartialEq)]
-enum SystemLabel {
+#[derive(SystemSet, Debug, Clone, Hash, Eq, PartialEq)]
+enum SystemStages {
     Input,
     Velocity,
 }
 
-#[derive(AssetCollection)]
+#[derive(AssetCollection, Resource)]
 pub struct ImageAssets {
     #[asset(path = "images/ggrs_logo.png")]
     pub ggrs_logo: Handle<Image>,
 }
 
-#[derive(AssetCollection)]
+#[derive(AssetCollection, Resource)]
 pub struct FontAssets {
     #[asset(path = "fonts/FiraSans-Bold.ttf")]
     pub default_font: Handle<Font>,
@@ -70,12 +71,6 @@ impl Config for GGRSConfig {
 fn main() {
     let mut app = App::new();
 
-    AssetLoader::new(AppState::AssetLoading)
-        .continue_to_state(AppState::MenuMain)
-        .with_collection::<ImageAssets>()
-        .with_collection::<FontAssets>()
-        .build(&mut app);
-
     GGRSPlugin::<GGRSConfig>::new()
         .with_update_frequency(FPS)
         .with_input_system(round::input)
@@ -83,30 +78,28 @@ fn main() {
         .register_rollback_type::<Velocity>()
         .register_rollback_type::<FrameCount>()
         .register_rollback_type::<Checksum>()
-        .with_rollback_schedule(
-            Schedule::default()
-                .with_stage(
-                    ROLLBACK_SYSTEMS,
-                    SystemStage::parallel()
-                        .with_system(apply_inputs.label(SystemLabel::Input))
-                        .with_system(
-                            update_velocity
-                                .label(SystemLabel::Velocity)
-                                .after(SystemLabel::Input),
-                        )
-                        .with_system(move_players.after(SystemLabel::Velocity))
-                        .with_system(increase_frame_count),
-                )
-                .with_stage_after(
-                    ROLLBACK_SYSTEMS,
-                    CHECKSUM_UPDATE,
-                    SystemStage::parallel().with_system(checksum_players),
-                ),
-        )
         .build(&mut app);
 
     app.add_plugins(DefaultPlugins)
-        .add_state(AppState::AssetLoading)
+        .add_state::<AppState>()
+        // asset loading
+        .add_loading_state(
+            LoadingState::new(AppState::AssetLoading).continue_to_state(AppState::MenuMain),
+        )
+        .add_collection_to_loading_state::<_, ImageAssets>(AppState::AssetLoading)
+        .add_collection_to_loading_state::<_, FontAssets>(AppState::AssetLoading)
+        // rollback schedule
+        .add_systems(
+            (
+                apply_inputs,
+                update_velocity,
+                move_players,
+                increase_frame_count,
+                checksum_players,
+            )
+                .chain()
+                .in_schedule(GGRSSchedule),
+        )
         // main menu
         .add_system_set(SystemSet::on_enter(AppState::MenuMain).with_system(menu::main::setup_ui))
         .add_system_set(

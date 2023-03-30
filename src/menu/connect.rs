@@ -1,5 +1,5 @@
 use bevy::{prelude::*, tasks::IoTaskPool};
-use bevy_ggrs::SessionType;
+use bevy_ggrs::Session;
 use ggrs::{PlayerHandle, PlayerType, SessionBuilder};
 use matchbox_socket::WebRtcSocket;
 
@@ -19,10 +19,12 @@ pub enum MenuConnectBtn {
     Back,
 }
 
+#[derive(Resource)]
 pub struct LocalHandles {
     pub handles: Vec<PlayerHandle>,
 }
 
+#[derive(Resource)]
 pub struct ConnectData {
     pub lobby_id: String,
 }
@@ -65,7 +67,7 @@ pub fn cleanup(mut commands: Commands) {
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     // ui camera
     commands
-        .spawn_bundle(UiCameraBundle::default())
+        .spawn_bundle(Camera2dBundle::default())
         .insert(MenuConnectUI);
 
     // root node
@@ -81,7 +83,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            color: Color::NONE.into(),
+            background_color: Color::NONE,
             ..Default::default()
         })
         .with_children(|parent| {
@@ -115,7 +117,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: Rect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    color: NORMAL_BUTTON.into(),
+                    background_color: NORMAL_BUTTON,
                     ..Default::default()
                 })
                 .with_children(|parent| {
@@ -139,7 +141,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
 
 pub fn btn_visuals(
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor),
+        (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<MenuConnectBtn>),
     >,
 ) {
@@ -206,7 +208,6 @@ fn create_ggrs_session(mut commands: Commands, socket: WebRtcSocket) {
         .start_p2p_session(socket)
         .expect("Session could not be created.");
 
-    commands.insert_resource(sess);
+    commands.insert_resource(Session::P2PSession(sess));
     commands.insert_resource(LocalHandles { handles });
-    commands.insert_resource(SessionType::P2PSession);
 }

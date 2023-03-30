@@ -1,7 +1,7 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_ggrs::{Rollback, RollbackIdProvider, SessionType};
+use bevy_ggrs::{PlayerInputs, Rollback, RollbackIdProvider, Session};
 use bytemuck::{Pod, Zeroable};
-use ggrs::{InputStatus, P2PSession, PlayerHandle};
+use ggrs::{InputStatus, PlayerHandle};
 
 use crate::{
     checksum::Checksum,
@@ -52,7 +52,7 @@ pub struct CarControls {
     steer: f32,
 }
 
-#[derive(Default, Reflect, Hash, Component)]
+#[derive(Default, Reflect, Hash, Resource)]
 #[reflect(Hash)]
 pub struct FrameCount {
     pub frame: u32,
@@ -99,7 +99,7 @@ pub fn input(
 pub fn setup_round(mut commands: Commands) {
     commands.insert_resource(FrameCount::default());
     commands
-        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .spawn_bundle(Camera2dBundle::default())
         .insert(RoundEntity);
     commands
         .spawn_bundle(SpriteBundle {
@@ -144,7 +144,7 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
     }
 }
 
-pub fn print_p2p_events(mut session: ResMut<P2PSession<GGRSConfig>>) {
+pub fn print_p2p_events(mut session: ResMut<Session<GGRSConfig>>) {
     for event in session.events() {
         info!("GGRS Event: {:?}", event);
     }
@@ -165,8 +165,7 @@ pub fn check_win(mut state: ResMut<State<AppState>>, mut commands: Commands) {
 pub fn cleanup(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) {
     commands.remove_resource::<FrameCount>();
     commands.remove_resource::<LocalHandles>();
-    commands.remove_resource::<P2PSession<GGRSConfig>>();
-    commands.remove_resource::<SessionType>();
+    commands.remove_resource::<Session<GGRSConfig>>();
 
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
@@ -183,7 +182,7 @@ pub fn increase_frame_count(mut frame_count: ResMut<FrameCount>) {
 
 pub fn apply_inputs(
     mut query: Query<(&mut CarControls, &Player)>,
-    inputs: Res<Vec<(Input, InputStatus)>>,
+    inputs: Res<PlayerInputs<GGRSConfig>>,
 ) {
     for (mut c, p) in query.iter_mut() {
         let input = match inputs[p.handle].1 {

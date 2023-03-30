@@ -23,6 +23,7 @@ pub struct ButtonEnabled(bool);
 #[derive(Component)]
 pub struct LobbyCodeText;
 
+#[derive(Resource)]
 pub struct LobbyID(String);
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
@@ -30,7 +31,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     commands.insert_resource(LobbyID("".to_owned()));
     // ui camera
     commands
-        .spawn_bundle(UiCameraBundle::default())
+        .spawn_bundle(Camera2dBundle::default())
         .insert(MenuOnlineUI);
 
     // root node
@@ -46,7 +47,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            color: Color::NONE.into(),
+            background_color: Color::NONE,
             ..Default::default()
         })
         .with_children(|parent| {
@@ -94,7 +95,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: Rect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    color: NORMAL_BUTTON.into(),
+                    background_color: NORMAL_BUTTON,
                     ..Default::default()
                 })
                 .with_children(|parent| {
@@ -125,7 +126,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: Rect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    color: NORMAL_BUTTON.into(),
+                    background_color: NORMAL_BUTTON,
                     ..Default::default()
                 })
                 .with_children(|parent| {
@@ -155,7 +156,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: Rect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    color: NORMAL_BUTTON.into(),
+                    background_color: NORMAL_BUTTON,
                     ..Default::default()
                 })
                 .with_children(|parent| {
@@ -223,7 +224,7 @@ pub fn update_lobby_btn(
 
 pub fn btn_visuals(
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor, Option<&ButtonEnabled>),
+        (&Interaction, &mut BackgroundColor, Option<&ButtonEnabled>),
         With<MenuOnlineBtn>,
     >,
 ) {
