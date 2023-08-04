@@ -10,6 +10,7 @@ pub enum MenuWinBtn {
     Back,
 }
 
+#[derive(Resource)]
 pub struct MatchData {
     pub result: String,
 }
@@ -17,7 +18,7 @@ pub struct MatchData {
 pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets: Res<FontAssets>) {
     // ui camera
     commands
-        .spawn_bundle(UiCameraBundle::default())
+        .spawn_bundle(Camera2dBundle::default())
         .insert(WinUI);
 
     // root node
@@ -25,7 +26,6 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
         .spawn_bundle(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect::all(Val::Px(0.)),
                 flex_direction: FlexDirection::ColumnReverse,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
@@ -33,7 +33,6 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            color: Color::NONE.into(),
             ..Default::default()
         })
         .with_children(|parent| {
@@ -59,14 +58,15 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),
                         padding: Rect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    color: NORMAL_BUTTON.into(),
+                    background_color: NORMAL_BUTTON.into(),
                     ..Default::default()
                 })
                 .with_children(|parent| {
@@ -92,7 +92,7 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
 
 pub fn btn_visuals(
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor),
+        (&Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<MenuWinBtn>),
     >,
 ) {

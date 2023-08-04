@@ -39,7 +39,6 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .spawn_bundle(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect::all(Val::Px(0.)),
                 flex_direction: FlexDirection::ColumnReverse,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
@@ -88,7 +87,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),
@@ -119,7 +119,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),
@@ -149,14 +150,15 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),
                         padding: Rect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: NORMAL_BUTTON,
+                    background_color: NORMAL_BUTTON.into(),
                     ..Default::default()
                 })
                 .with_children(|parent| {

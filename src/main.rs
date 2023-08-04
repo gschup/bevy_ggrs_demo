@@ -4,9 +4,9 @@ mod round;
 
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
-use bevy_ggrs::{GGRSPlugin, GGRSSchedule};
+use bevy_ggrs::{GgrsPlugin, GgrsSchedule};
 use checksum::{checksum_players, Checksum};
-use ggrs::Config;
+use bevy_ggrs::ggrs::Config;
 use menu::{
     connect::{create_matchbox_socket, update_matchbox_socket},
     online::{update_lobby_btn, update_lobby_id, update_lobby_id_display},
@@ -71,7 +71,7 @@ impl Config for GGRSConfig {
 fn main() {
     let mut app = App::new();
 
-    GGRSPlugin::<GGRSConfig>::new()
+    GgrsPlugin::<GGRSConfig>::new()
         .with_update_frequency(FPS)
         .with_input_system(round::input)
         .register_rollback_type::<Transform>()
@@ -90,6 +90,7 @@ fn main() {
         .add_collection_to_loading_state::<_, FontAssets>(AppState::AssetLoading)
         // rollback schedule
         .add_systems(
+            GgrsSchedule, 
             (
                 apply_inputs,
                 update_velocity,
@@ -98,7 +99,7 @@ fn main() {
                 checksum_players,
             )
                 .chain()
-                .in_schedule(GGRSSchedule),
+                
         )
         // main menu
         .add_system_set(SystemSet::on_enter(AppState::MenuMain).with_system(menu::main::setup_ui))

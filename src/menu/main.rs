@@ -1,6 +1,6 @@
 use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::Session;
-use ggrs::{PlayerType, SessionBuilder};
+use bevy_ggrs::ggrs::{PlayerType, SessionBuilder};
 
 use crate::{
     AppState, FontAssets, GGRSConfig, ImageAssets, BUTTON_TEXT, CHECK_DISTANCE, FPS,
@@ -34,7 +34,6 @@ pub fn setup_ui(
         .spawn_bundle(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect::all(Val::Px(0.)),
                 flex_direction: FlexDirection::ColumnReverse,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
@@ -49,7 +48,8 @@ pub fn setup_ui(
             // logo
             parent.spawn_bundle(ImageBundle {
                 style: Style {
-                    size: Size::new(Val::Px(500.0), Val::Px(139.0)),
+                    width: Val::Px(500.0),
+                    height: Val::Px(139.0),
                     margin: Rect::all(Val::Px(16.)),
                     padding: Rect::all(Val::Px(16.)),
                     ..Default::default()
@@ -62,7 +62,8 @@ pub fn setup_ui(
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),
@@ -92,7 +93,8 @@ pub fn setup_ui(
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),
@@ -122,7 +124,8 @@ pub fn setup_ui(
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),

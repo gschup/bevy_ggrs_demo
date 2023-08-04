@@ -1,7 +1,7 @@
-use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy::prelude::*;
 use bevy_ggrs::Session;
-use ggrs::{PlayerHandle, PlayerType, SessionBuilder};
-use matchbox_socket::WebRtcSocket;
+use bevy_ggrs::ggrs::{PlayerHandle, PlayerType, SessionBuilder};
+use bevy_matchbox::prelude::*;
 
 use crate::{
     AppState, FontAssets, GGRSConfig, BUTTON_TEXT, FPS, HOVERED_BUTTON, INPUT_DELAY,
@@ -32,12 +32,10 @@ pub struct ConnectData {
 pub fn create_matchbox_socket(
     mut commands: Commands,
     connect_data: Res<ConnectData>,
-    task_pool: Res<IoTaskPool>,
 ) {
     let lobby_id = &connect_data.lobby_id;
     let room_url = format!("{MATCHBOX_ADDR}/{lobby_id}");
-    let (socket, message_loop) = WebRtcSocket::new(room_url);
-    task_pool.spawn(message_loop).detach();
+    let socket: MatchboxSocket<SingleChannel> = MatchboxSocket::new_ggrs(room_url);
     commands.insert_resource(Some(socket));
     commands.remove_resource::<ConnectData>();
 }
@@ -45,7 +43,7 @@ pub fn create_matchbox_socket(
 pub fn update_matchbox_socket(
     commands: Commands,
     mut state: ResMut<State<AppState>>,
-    mut socket_res: ResMut<Option<WebRtcSocket>>,
+    mut socket_res: ResMut<Option<MatchboxSocket<SingleChannel>>>,
 ) {
     if let Some(socket) = socket_res.as_mut() {
         socket.accept_new_connections();
@@ -61,7 +59,7 @@ pub fn update_matchbox_socket(
 }
 
 pub fn cleanup(mut commands: Commands) {
-    commands.remove_resource::<Option<WebRtcSocket>>();
+    commands.remove_resource::<Option<MatchboxSocket<SingleChannel>>>();
 }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
@@ -75,7 +73,6 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .spawn_bundle(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect::all(Val::Px(0.)),
                 flex_direction: FlexDirection::ColumnReverse,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
@@ -110,7 +107,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: Rect::all(Val::Px(16.)),
@@ -183,7 +181,7 @@ pub fn cleanup_ui(query: Query<Entity, With<MenuConnectUI>>, mut commands: Comma
     }
 }
 
-fn create_ggrs_session(mut commands: Commands, socket: WebRtcSocket) {
+fn create_ggrs_session(mut commands: Commands, socket: MatchboxSocket<SingleChannel>) {
     // create a new ggrs session
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(NUM_PLAYERS)

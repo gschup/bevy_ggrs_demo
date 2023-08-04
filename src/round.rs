@@ -1,7 +1,7 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_ggrs::{PlayerInputs, Rollback, RollbackIdProvider, Session};
+use bevy_ggrs::{PlayerInputs, Rollback, Session};
 use bytemuck::{Pod, Zeroable};
-use ggrs::{InputStatus, PlayerHandle};
+use bevy_ggrs::ggrs::{InputStatus, PlayerHandle};
 
 use crate::{
     checksum::Checksum,
@@ -114,7 +114,7 @@ pub fn setup_round(mut commands: Commands) {
         .insert(RoundEntity);
 }
 
-pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>) {
+pub fn spawn_players(mut commands: Commands) {
     let r = ARENA_SIZE / 4.;
 
     for handle in 0..NUM_PLAYERS {
@@ -139,7 +139,7 @@ pub fn spawn_players(mut commands: Commands, mut rip: ResMut<RollbackIdProvider>
             .insert(Velocity::default())
             .insert(CarControls::default())
             .insert(Checksum::default())
-            .insert(Rollback::new(rip.next_id()))
+            .add_rollback()
             .insert(RoundEntity);
     }
 }
