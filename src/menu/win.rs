@@ -17,13 +17,11 @@ pub struct MatchData {
 
 pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets: Res<FontAssets>) {
     // ui camera
-    commands
-        .spawn_bundle(Camera2dBundle::default())
-        .insert(WinUI);
+    commands.spawn(Camera2dBundle::default()).insert(WinUI);
 
     // root node
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
                 flex_direction: FlexDirection::ColumnReverse,
@@ -37,51 +35,38 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
         })
         .with_children(|parent| {
             // match result string
-            parent.spawn_bundle(TextBundle {
-                style: Style {
-                    align_self: AlignSelf::Center,
-                    justify_content: JustifyContent::Center,
-                    ..Default::default()
+            parent.spawn(TextBundle::from_section(
+                match_data.result.clone(),
+                TextStyle {
+                    font: font_assets.default_font.clone(),
+                    font_size: 96.,
+                    color: BUTTON_TEXT,
                 },
-                text: Text::with_section(
-                    match_data.result.clone(),
-                    TextStyle {
-                        font: font_assets.default_font.clone(),
-                        font_size: 96.,
-                        color: BUTTON_TEXT,
-                    },
-                    Default::default(),
-                ),
-                ..Default::default()
-            });
+            ));
             // back to menu button
             parent
-                .spawn_bundle(ButtonBundle {
+                .spawn(ButtonBundle {
                     style: Style {
                         width: Val::Px(250.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
-                        margin: Rect::all(Val::Px(16.)),
-                        padding: Rect::all(Val::Px(16.)),
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
                     background_color: NORMAL_BUTTON.into(),
                     ..Default::default()
                 })
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "Back to Menu",
-                            TextStyle {
-                                font: font_assets.default_font.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn(TextBundle::from_section(
+                        "Back to Menu",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
                 })
                 .insert(MenuWinBtn::Back);
         })
@@ -98,7 +83,7 @@ pub fn btn_visuals(
 ) {
     for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
-            Interaction::Clicked => {
+            Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
             }
             Interaction::Hovered => {
@@ -112,16 +97,14 @@ pub fn btn_visuals(
 }
 
 pub fn btn_listeners(
-    mut state: ResMut<State<AppState>>,
+    mut state: ResMut<NextState<AppState>>,
     mut interaction_query: Query<(&Interaction, &MenuWinBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
-        if let Interaction::Clicked = *interaction {
+        if let Interaction::Pressed = *interaction {
             match btn {
                 MenuWinBtn::Back => {
-                    state
-                        .set(AppState::MenuMain)
-                        .expect("Could not change state.");
+                    state.set(AppState::MenuMain);
                 }
             }
         }

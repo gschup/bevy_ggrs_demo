@@ -1,7 +1,7 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_ggrs::{PlayerInputs, Rollback, Session};
-use bytemuck::{Pod, Zeroable};
 use bevy_ggrs::ggrs::{InputStatus, PlayerHandle};
+use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback, Session};
+use bytemuck::{Pod, Zeroable};
 
 use crate::{
     checksum::Checksum,
@@ -99,10 +99,10 @@ pub fn input(
 pub fn setup_round(mut commands: Commands) {
     commands.insert_resource(FrameCount::default());
     commands
-        .spawn_bundle(Camera2dBundle::default())
+        .spawn(Camera2dBundle::default())
         .insert(RoundEntity);
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform::from_xyz(0., 0., 0.),
             sprite: Sprite {
                 color: Color::BLACK,
@@ -126,7 +126,7 @@ pub fn spawn_players(mut commands: Commands) {
         transform.rotate(Quat::from_rotation_z(rot));
 
         commands
-            .spawn_bundle(SpriteBundle {
+            .spawn(SpriteBundle {
                 transform,
                 sprite: Sprite {
                     color: PLAYER_COLORS[handle],
@@ -145,17 +145,19 @@ pub fn spawn_players(mut commands: Commands) {
 }
 
 pub fn print_p2p_events(mut session: ResMut<Session<GGRSConfig>>) {
-    for event in session.events() {
-        info!("GGRS Event: {:?}", event);
+    if let Session::P2P(s) = session.as_mut() {
+        for event in s.events() {
+            info!("GGRS Event: {:?}", event);
+        }
     }
 }
 
-pub fn check_win(mut state: ResMut<State<AppState>>, mut commands: Commands) {
+pub fn check_win(mut next_state: ResMut<NextState<AppState>>, mut commands: Commands) {
     let condition = false;
     let confirmed = false;
 
     if condition && confirmed {
-        state.set(AppState::Win).expect("Could not change state.");
+        next_state.set(AppState::Win);
         commands.insert_resource(MatchData {
             result: "Orange won!".to_owned(),
         });

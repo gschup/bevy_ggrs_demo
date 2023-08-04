@@ -31,12 +31,12 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     commands.insert_resource(LobbyID("".to_owned()));
     // ui camera
     commands
-        .spawn_bundle(Camera2dBundle::default())
+        .spawn(Camera2dBundle::default())
         .insert(MenuOnlineUI);
 
     // root node
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
                 flex_direction: FlexDirection::ColumnReverse,
@@ -46,13 +46,13 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            background_color: Color::NONE,
+            background_color: Color::NONE.into(),
             ..Default::default()
         })
         .with_children(|parent| {
             // lobby id text
             parent
-                .spawn_bundle(TextBundle {
+                .spawn(TextBundle {
                     style: Style {
                         align_self: AlignSelf::Center,
                         justify_content: JustifyContent::Center,
@@ -85,95 +85,83 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
 
             // lobby match button
             parent
-                .spawn_bundle(ButtonBundle {
+                .spawn(ButtonBundle {
                     style: Style {
                         width: Val::Px(250.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
-                        margin: Rect::all(Val::Px(16.)),
-                        padding: Rect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    background_color: NORMAL_BUTTON,
-                    ..Default::default()
-                })
-                .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "Lobby Match",
-                            TextStyle {
-                                font: font_assets.default_font.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
-                })
-                .insert(MenuOnlineBtn::LobbyMatch)
-                .insert(ButtonEnabled(false));
-
-            // quick match button
-            parent
-                .spawn_bundle(ButtonBundle {
-                    style: Style {
-                        width: Val::Px(250.0),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: Rect::all(Val::Px(16.)),
-                        padding: Rect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    background_color: NORMAL_BUTTON,
-                    ..Default::default()
-                })
-                .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "Quick Match",
-                            TextStyle {
-                                font: font_assets.default_font.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
-                })
-                .insert(MenuOnlineBtn::QuickMatch);
-
-            // back button
-            parent
-                .spawn_bundle(ButtonBundle {
-                    style: Style {
-                        width: Val::Px(250.0),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: Rect::all(Val::Px(16.)),
-                        padding: Rect::all(Val::Px(16.)),
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
                     background_color: NORMAL_BUTTON.into(),
                     ..Default::default()
                 })
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "Back to Menu",
-                            TextStyle {
-                                font: font_assets.default_font.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                            Default::default(),
-                        ),
+                    parent.spawn(TextBundle::from_section(
+                        "Lobby Match",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
+                })
+                .insert(MenuOnlineBtn::LobbyMatch)
+                .insert(ButtonEnabled(false));
+
+            // quick match button
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
-                    });
+                    },
+                    background_color: NORMAL_BUTTON.into(),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Quick Match",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
+                })
+                .insert(MenuOnlineBtn::QuickMatch);
+
+            // back button
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
+                        ..Default::default()
+                    },
+                    background_color: NORMAL_BUTTON.into(),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Back to Menu",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
                 })
                 .insert(MenuOnlineBtn::Back);
         })
@@ -237,7 +225,7 @@ pub fn btn_visuals(
         };
         if changeable {
             match *interaction {
-                Interaction::Clicked => {
+                Interaction::Pressed => {
                     *color = PRESSED_BUTTON.into();
                 }
                 Interaction::Hovered => {
@@ -255,7 +243,7 @@ pub fn btn_visuals(
 
 pub fn btn_listeners(
     mut commands: Commands,
-    mut state: ResMut<State<AppState>>,
+    mut state: ResMut<NextState<AppState>>,
     lobby_id: Res<LobbyID>,
     mut interaction_query: Query<
         (&Interaction, &MenuOnlineBtn, Option<&ButtonEnabled>),
@@ -272,28 +260,22 @@ pub fn btn_listeners(
             continue;
         }
 
-        if let Interaction::Clicked = *interaction {
+        if let Interaction::Pressed = *interaction {
             match btn {
                 MenuOnlineBtn::LobbyMatch => {
                     commands.insert_resource(ConnectData {
                         lobby_id: format!("bevy{}", lobby_id.0),
                     });
-                    state
-                        .set(AppState::MenuConnect)
-                        .expect("Could not change state.");
+                    state.set(AppState::MenuConnect);
                 }
                 MenuOnlineBtn::QuickMatch => {
                     commands.insert_resource(ConnectData {
                         lobby_id: "bevy?next=2".to_owned(),
                     });
-                    state
-                        .set(AppState::MenuConnect)
-                        .expect("Could not change state.");
+                    state.set(AppState::MenuConnect);
                 }
                 MenuOnlineBtn::Back => {
-                    state
-                        .set(AppState::MenuMain)
-                        .expect("Could not change state.");
+                    state.set(AppState::MenuMain);
                 }
             }
         }

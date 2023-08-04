@@ -1,6 +1,6 @@
 use bevy::{app::AppExit, prelude::*};
-use bevy_ggrs::Session;
 use bevy_ggrs::ggrs::{PlayerType, SessionBuilder};
+use bevy_ggrs::Session;
 
 use crate::{
     AppState, FontAssets, GGRSConfig, ImageAssets, BUTTON_TEXT, CHECK_DISTANCE, FPS,
@@ -25,13 +25,11 @@ pub fn setup_ui(
     font_assets: Res<FontAssets>,
 ) {
     // ui camera
-    commands
-        .spawn_bundle(Camera2dBundle::default())
-        .insert(MenuMainUI);
+    commands.spawn(Camera2dBundle::default()).insert(MenuMainUI);
 
     // root node
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
                 flex_direction: FlexDirection::ColumnReverse,
@@ -41,17 +39,17 @@ pub fn setup_ui(
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            background_color: Color::NONE,
+            background_color: Color::NONE.into(),
             ..Default::default()
         })
         .with_children(|parent| {
             // logo
-            parent.spawn_bundle(ImageBundle {
+            parent.spawn(ImageBundle {
                 style: Style {
                     width: Val::Px(500.0),
                     height: Val::Px(139.0),
-                    margin: Rect::all(Val::Px(16.)),
-                    padding: Rect::all(Val::Px(16.)),
+                    margin: UiRect::all(Val::Px(16.)),
+                    padding: UiRect::all(Val::Px(16.)),
                     ..Default::default()
                 },
                 image: image_assets.ggrs_logo.clone().into(),
@@ -60,94 +58,82 @@ pub fn setup_ui(
 
             // online match button
             parent
-                .spawn_bundle(ButtonBundle {
+                .spawn(ButtonBundle {
                     style: Style {
                         width: Val::Px(200.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
-                        margin: Rect::all(Val::Px(16.)),
-                        padding: Rect::all(Val::Px(16.)),
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: NORMAL_BUTTON,
+                    background_color: NORMAL_BUTTON.into(),
                     ..Default::default()
                 })
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "Online",
-                            TextStyle {
-                                font: font_assets.default_font.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn(TextBundle::from_section(
+                        "Online",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
                 })
                 .insert(MenuMainBtn::OnlineMatch);
 
             // local mode button
             parent
-                .spawn_bundle(ButtonBundle {
+                .spawn(ButtonBundle {
                     style: Style {
                         width: Val::Px(250.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
-                        margin: Rect::all(Val::Px(16.)),
-                        padding: Rect::all(Val::Px(16.)),
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: NORMAL_BUTTON,
+                    background_color: NORMAL_BUTTON.into(),
                     ..Default::default()
                 })
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "Local",
-                            TextStyle {
-                                font: font_assets.default_font.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn(TextBundle::from_section(
+                        "Local",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
                 })
                 .insert(MenuMainBtn::LocalMatch);
 
             // quit button
             parent
-                .spawn_bundle(ButtonBundle {
+                .spawn(ButtonBundle {
                     style: Style {
                         width: Val::Px(200.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
-                        margin: Rect::all(Val::Px(16.)),
-                        padding: Rect::all(Val::Px(16.)),
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: NORMAL_BUTTON,
+                    background_color: NORMAL_BUTTON.into(),
                     ..Default::default()
                 })
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "Quit",
-                            TextStyle {
-                                font: font_assets.default_font.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn(TextBundle::from_section(
+                        "Quit",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
                 })
                 .insert(MenuMainBtn::Quit);
         })
@@ -162,7 +148,7 @@ pub fn btn_visuals(
 ) {
     for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
-            Interaction::Clicked => {
+            Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
             }
             Interaction::Hovered => {
@@ -178,22 +164,18 @@ pub fn btn_visuals(
 pub fn btn_listeners(
     mut exit: EventWriter<AppExit>,
     mut commands: Commands,
-    mut state: ResMut<State<AppState>>,
+    mut state: ResMut<NextState<AppState>>,
     mut interaction_query: Query<(&Interaction, &MenuMainBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
-        if let Interaction::Clicked = *interaction {
+        if let Interaction::Pressed = *interaction {
             match btn {
                 MenuMainBtn::OnlineMatch => {
-                    state
-                        .set(AppState::MenuOnline)
-                        .expect("Could not change state.");
+                    state.set(AppState::MenuOnline);
                 }
                 MenuMainBtn::LocalMatch => {
                     create_synctest_session(&mut commands);
-                    state
-                        .set(AppState::RoundLocal)
-                        .expect("Could not change state.");
+                    state.set(AppState::RoundLocal);
                 }
                 MenuMainBtn::Quit => {
                     exit.send(AppExit);
@@ -226,7 +208,7 @@ fn create_synctest_session(commands: &mut Commands) {
 
     let sess = sess_build.start_synctest_session().expect("");
 
-    commands.insert_resource(Session::SyncTestSession(sess));
+    commands.insert_resource(Session::SyncTest(sess));
     commands.insert_resource(LocalHandles {
         handles: (0..NUM_PLAYERS).collect(),
     });

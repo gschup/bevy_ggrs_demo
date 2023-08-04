@@ -4,9 +4,10 @@ mod round;
 
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
-use bevy_ggrs::{GgrsPlugin, GgrsSchedule};
-use checksum::{checksum_players, Checksum};
 use bevy_ggrs::ggrs::Config;
+use bevy_ggrs::{GgrsPlugin, GgrsSchedule};
+use bevy_matchbox::prelude::*;
+use checksum::{checksum_players, Checksum};
 use menu::{
     connect::{create_matchbox_socket, update_matchbox_socket},
     online::{update_lobby_btn, update_lobby_id, update_lobby_id_display},
@@ -18,8 +19,6 @@ use round::{
 
 const NUM_PLAYERS: usize = 2;
 const FPS: usize = 60;
-const ROLLBACK_SYSTEMS: &str = "rollback_systems";
-const CHECKSUM_UPDATE: &str = "checksum_update";
 const MAX_PREDICTION: usize = 12;
 const INPUT_DELAY: usize = 2;
 const CHECK_DISTANCE: usize = 2;
@@ -42,12 +41,6 @@ pub enum AppState {
     Win,
 }
 
-#[derive(SystemSet, Debug, Clone, Hash, Eq, PartialEq)]
-enum SystemStages {
-    Input,
-    Velocity,
-}
-
 #[derive(AssetCollection, Resource)]
 pub struct ImageAssets {
     #[asset(path = "images/ggrs_logo.png")]
@@ -65,7 +58,7 @@ pub struct GGRSConfig;
 impl Config for GGRSConfig {
     type Input = round::Input;
     type State = u8;
-    type Address = String;
+    type Address = PeerId;
 }
 
 fn main() {
@@ -74,10 +67,10 @@ fn main() {
     GgrsPlugin::<GGRSConfig>::new()
         .with_update_frequency(FPS)
         .with_input_system(round::input)
-        .register_rollback_type::<Transform>()
-        .register_rollback_type::<Velocity>()
-        .register_rollback_type::<FrameCount>()
-        .register_rollback_type::<Checksum>()
+        .register_rollback_component::<Transform>()
+        .register_rollback_component::<Velocity>()
+        .register_rollback_component::<Checksum>()
+        .register_rollback_resource::<FrameCount>()
         .build(&mut app);
 
     app.add_plugins(DefaultPlugins)
@@ -90,7 +83,7 @@ fn main() {
         .add_collection_to_loading_state::<_, FontAssets>(AppState::AssetLoading)
         // rollback schedule
         .add_systems(
-            GgrsSchedule, 
+            GgrsSchedule,
             (
                 apply_inputs,
                 update_velocity,
@@ -98,82 +91,66 @@ fn main() {
                 increase_frame_count,
                 checksum_players,
             )
-                .chain()
-                
+                .chain(),
         )
         // main menu
-        .add_system_set(SystemSet::on_enter(AppState::MenuMain).with_system(menu::main::setup_ui))
-        .add_system_set(
-            SystemSet::on_update(AppState::MenuMain)
-                .with_system(menu::main::btn_visuals)
-                .with_system(menu::main::btn_listeners),
+        .add_systems(OnEnter(AppState::MenuMain), menu::main::setup_ui)
+        .add_systems(
+            Update,
+            (menu::main::btn_visuals, menu::main::btn_listeners)
+                .run_if(in_state(AppState::MenuMain)),
         )
-        .add_system_set(SystemSet::on_exit(AppState::MenuMain).with_system(menu::main::cleanup_ui))
+        .add_systems(OnExit(AppState::MenuMain), menu::main::cleanup_ui)
         //online menu
-        .add_system_set(
-            SystemSet::on_enter(AppState::MenuOnline).with_system(menu::online::setup_ui),
+        .add_systems(OnEnter(AppState::MenuOnline), menu::online::setup_ui)
+        .add_systems(
+            Update,
+            (
+                update_lobby_id,
+                update_lobby_id_display,
+                update_lobby_btn,
+                menu::online::btn_visuals,
+                menu::online::btn_listeners,
+            )
+                .run_if(in_state(AppState::MenuMain)),
         )
-        .add_system_set(
-            SystemSet::on_update(AppState::MenuOnline)
-                .with_system(update_lobby_id)
-                .with_system(update_lobby_id_display)
-                .with_system(update_lobby_btn)
-                .with_system(menu::online::btn_visuals)
-                .with_system(menu::online::btn_listeners),
-        )
-        .add_system_set(
-            SystemSet::on_exit(AppState::MenuOnline).with_system(menu::online::cleanup_ui),
-        )
+        .add_systems(OnExit(AppState::MenuOnline), menu::online::cleanup_ui)
         // connect menu
-        .add_system_set(
-            SystemSet::on_enter(AppState::MenuConnect)
-                .with_system(create_matchbox_socket)
-                .with_system(menu::connect::setup_ui),
+        .add_systems(
+            OnEnter(AppState::MenuConnect),
+            (create_matchbox_socket, menu::connect::setup_ui),
         )
-        .add_system_set(
-            SystemSet::on_update(AppState::MenuConnect)
-                .with_system(update_matchbox_socket)
-                .with_system(menu::connect::btn_visuals)
-                .with_system(menu::connect::btn_listeners),
+        .add_systems(
+            Update,
+            (
+                update_matchbox_socket,
+                menu::connect::btn_visuals,
+                menu::connect::btn_listeners,
+            )
+                .run_if(in_state(AppState::MenuConnect)),
         )
-        .add_system_set(
-            SystemSet::on_exit(AppState::MenuConnect)
-                .with_system(menu::connect::cleanup)
-                .with_system(menu::connect::cleanup_ui),
+        .add_systems(
+            OnExit(AppState::MenuConnect),
+            (menu::connect::cleanup, menu::connect::cleanup_ui),
         )
         // win menu
-        .add_system_set(SystemSet::on_enter(AppState::Win).with_system(menu::win::setup_ui))
-        .add_system_set(
-            SystemSet::on_update(AppState::Win)
-                .with_system(menu::win::btn_visuals)
-                .with_system(menu::win::btn_listeners),
+        .add_systems(OnEnter(AppState::Win), menu::win::setup_ui)
+        .add_systems(
+            Update,
+            (menu::win::btn_visuals, menu::win::btn_listeners).run_if(in_state(AppState::Win)),
         )
-        .add_system_set(SystemSet::on_exit(AppState::Win).with_system(menu::win::cleanup_ui))
+        .add_systems(OnExit(AppState::Win), menu::win::cleanup_ui)
         // local round
-        .add_system_set(
-            SystemSet::on_enter(AppState::RoundLocal)
-                .with_system(setup_round)
-                .with_system(spawn_players),
-        )
-        .add_system_set(SystemSet::on_update(AppState::RoundLocal).with_system(check_win))
-        .add_system_set(SystemSet::on_exit(AppState::RoundLocal).with_system(round::cleanup))
+        .add_systems(OnEnter(AppState::RoundLocal), (setup_round, spawn_players))
+        .add_systems(Update, check_win.run_if(in_state(AppState::RoundLocal)))
+        .add_systems(OnExit(AppState::RoundLocal), round::cleanup)
         // online round
-        .add_system_set(
-            SystemSet::on_enter(AppState::RoundOnline)
-                .with_system(setup_round)
-                .with_system(spawn_players),
+        .add_systems(OnEnter(AppState::RoundOnline), (setup_round, spawn_players))
+        .add_systems(
+            Update,
+            (check_win, print_p2p_events).run_if(in_state(AppState::RoundOnline)),
         )
-        .add_system_set(
-            SystemSet::on_update(AppState::RoundOnline)
-                .with_system(print_p2p_events)
-                .with_system(check_win),
-        )
-        .add_system_set(SystemSet::on_exit(AppState::RoundOnline).with_system(round::cleanup));
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        app.add_system(bevy_web_resizer::web_resize_system);
-    }
+        .add_systems(OnExit(AppState::RoundOnline), round::cleanup);
 
     app.run();
 }
