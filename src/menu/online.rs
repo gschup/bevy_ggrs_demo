@@ -38,11 +38,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     commands
         .spawn(NodeBundle {
             style: Style {
-                position_type: PositionType::Absolute,
-                flex_direction: FlexDirection::ColumnReverse,
-                align_content: AlignContent::Center,
+                flex_direction: FlexDirection::ColumnReverse, 
                 align_items: AlignItems::Center,
-                align_self: AlignSelf::Center,
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },

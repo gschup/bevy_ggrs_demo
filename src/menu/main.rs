@@ -31,11 +31,8 @@ pub fn setup_ui(
     commands
         .spawn(NodeBundle {
             style: Style {
-                position_type: PositionType::Absolute,
-                flex_direction: FlexDirection::ColumnReverse,
-                align_content: AlignContent::Center,
+                flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
-                align_self: AlignSelf::Center,
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
