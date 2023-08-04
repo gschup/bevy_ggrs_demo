@@ -38,7 +38,7 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
 }
 
 pub fn update_matchbox_socket(
-    commands: Commands,
+    mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
 ) {
@@ -52,7 +52,34 @@ pub fn update_matchbox_socket(
     }
 
     if socket.connected_peers().count() >= NUM_PLAYERS {
-        create_ggrs_session(commands, &mut socket);
+        // create a new ggrs session
+        let mut sess_build = SessionBuilder::<GGRSConfig>::new()
+            .with_num_players(NUM_PLAYERS)
+            .with_max_prediction_window(MAX_PREDICTION)
+            .with_fps(FPS)
+            .expect("Invalid FPS")
+            .with_input_delay(INPUT_DELAY);
+
+        // add players
+        let mut handles = Vec::new();
+        for (i, player_type) in socket.players().iter().enumerate() {
+            if *player_type == PlayerType::Local {
+                handles.push(i);
+            }
+            sess_build = sess_build
+                .add_player(player_type.clone(), i)
+                .expect("Invalid player added.");
+        }
+
+        // start the GGRS session
+        let channel = socket.take_channel(0).unwrap();
+        let sess = sess_build
+            .start_p2p_session(channel)
+            .expect("Session could not be created.");
+
+        // insert session as resource and switch state
+        commands.insert_resource(Session::P2P(sess));
+        commands.insert_resource(LocalHandles { handles });
         state.set(AppState::RoundOnline);
     }
 }
@@ -159,34 +186,4 @@ pub fn cleanup_ui(query: Query<Entity, With<MenuConnectUI>>, mut commands: Comma
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }
-}
-
-fn create_ggrs_session(mut commands: Commands, socket: &mut MatchboxSocket<SingleChannel>) {
-    // create a new ggrs session
-    let mut sess_build = SessionBuilder::<GGRSConfig>::new()
-        .with_num_players(NUM_PLAYERS)
-        .with_max_prediction_window(MAX_PREDICTION)
-        .with_fps(FPS)
-        .expect("Invalid FPS")
-        .with_input_delay(INPUT_DELAY);
-
-    // add players
-    let mut handles = Vec::new();
-    for (i, player_type) in socket.players().iter().enumerate() {
-        if *player_type == PlayerType::Local {
-            handles.push(i);
-        }
-        sess_build = sess_build
-            .add_player(player_type.clone(), i)
-            .expect("Invalid player added.");
-    }
-
-    // start the GGRS session
-    let channel = socket.take_channel(0).unwrap();
-    let sess = sess_build
-        .start_p2p_session(channel)
-        .expect("Session could not be created.");
-
-    commands.insert_resource(Session::P2P(sess));
-    commands.insert_resource(LocalHandles { handles });
 }
