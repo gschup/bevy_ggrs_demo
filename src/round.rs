@@ -97,6 +97,7 @@ pub fn input(
 }
 
 pub fn setup_round(mut commands: Commands) {
+    println!("OH YEAH");
     commands.insert_resource(FrameCount::default());
     commands
         .spawn(Camera2dBundle::default())

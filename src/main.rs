@@ -112,7 +112,7 @@ fn main() {
                 menu::online::btn_visuals,
                 menu::online::btn_listeners,
             )
-                .run_if(in_state(AppState::MenuMain)),
+                .run_if(in_state(AppState::MenuOnline)),
         )
         .add_systems(OnExit(AppState::MenuOnline), menu::online::cleanup_ui)
         // connect menu
