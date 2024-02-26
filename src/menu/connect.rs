@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use bevy_ggrs::ggrs::{PlayerHandle, PlayerType, SessionBuilder};
-use bevy_ggrs::Session;
+use bevy_ggrs::ggrs::{PlayerType, SessionBuilder};
+use bevy_ggrs::{LocalPlayers, Session};
 use bevy_matchbox::prelude::*;
 
 use crate::{
@@ -8,8 +8,8 @@ use crate::{
     MAX_PREDICTION, NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON,
 };
 
-//const MATCHBOX_ADDR: &str = "ws://127.0.0.1:3536";
-const MATCHBOX_ADDR: &str = "wss://match.gschup.dev";
+const MATCHBOX_ADDR: &str = "ws://127.0.0.1:3536";
+// const MATCHBOX_ADDR: &str = "wss://match.gschup.dev";
 
 #[derive(Component)]
 pub struct MenuConnectUI;
@@ -17,11 +17,6 @@ pub struct MenuConnectUI;
 #[derive(Component)]
 pub enum MenuConnectBtn {
     Back,
-}
-
-#[derive(Resource)]
-pub struct LocalHandles {
-    pub handles: Vec<PlayerHandle>,
 }
 
 #[derive(Resource)]
@@ -51,11 +46,12 @@ pub fn update_matchbox_socket(
         }
     }
 
-    if socket.connected_peers().count() >= NUM_PLAYERS {
+    if socket.players().len() >= NUM_PLAYERS {
         // create a new ggrs session
         let mut sess_build = SessionBuilder::<GGRSConfig>::new()
             .with_num_players(NUM_PLAYERS)
             .with_max_prediction_window(MAX_PREDICTION)
+            .expect("Invalid prediction window")
             .with_fps(FPS)
             .expect("Invalid FPS")
             .with_input_delay(INPUT_DELAY);
@@ -79,13 +75,14 @@ pub fn update_matchbox_socket(
 
         // insert session as resource and switch state
         commands.insert_resource(Session::P2P(sess));
-        commands.insert_resource(LocalHandles { handles });
+        commands.insert_resource(LocalPlayers(handles));
         state.set(AppState::RoundOnline);
     }
 }
 
-pub fn cleanup(mut commands: Commands) {
-    commands.remove_resource::<MatchboxSocket<SingleChannel>>();
+pub fn cleanup(mut _commands: Commands) {
+    // FIXME: Removing MatchboxSocket crashes the game
+    // commands.remove_resource::<MatchboxSocket<SingleChannel>>();
 }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {

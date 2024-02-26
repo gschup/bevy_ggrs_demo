@@ -5,7 +5,7 @@ mod round;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_ggrs::ggrs::Config;
-use bevy_ggrs::{GgrsPlugin, GgrsSchedule};
+use bevy_ggrs::{GgrsApp, GgrsPlugin, GgrsSchedule, ReadInputs};
 use bevy_matchbox::prelude::*;
 use checksum::{checksum_players, Checksum};
 use menu::{
@@ -64,23 +64,23 @@ impl Config for GGRSConfig {
 fn main() {
     let mut app = App::new();
 
-    GgrsPlugin::<GGRSConfig>::new()
-        .with_update_frequency(FPS)
-        .with_input_system(round::input)
-        .register_rollback_component::<Transform>()
-        .register_rollback_component::<Velocity>()
-        .register_rollback_component::<Checksum>()
-        .register_rollback_resource::<FrameCount>()
-        .build(&mut app);
-
     app.add_plugins(DefaultPlugins)
         .add_state::<AppState>()
         // asset loading
         .add_loading_state(
-            LoadingState::new(AppState::AssetLoading).continue_to_state(AppState::MenuMain),
+            LoadingState::new(AppState::AssetLoading)
+                .continue_to_state(AppState::MenuMain)
+                .load_collection::<FontAssets>()
+                .load_collection::<ImageAssets>(),
         )
-        .add_collection_to_loading_state::<_, ImageAssets>(AppState::AssetLoading)
-        .add_collection_to_loading_state::<_, FontAssets>(AppState::AssetLoading)
+        // ggrs plugin
+        .add_plugins(GgrsPlugin::<GGRSConfig>::default())
+        .set_rollback_schedule_fps(FPS)
+        .add_systems(ReadInputs,round::input)
+        .rollback_component_with_clone::<Transform>()
+        .rollback_component_with_reflect::<Velocity>()
+        .rollback_component_with_reflect::<Checksum>()
+        .rollback_resource_with_reflect::<FrameCount>()
         // rollback schedule
         .add_systems(
             GgrsSchedule,

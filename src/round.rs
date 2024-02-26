@@ -1,11 +1,12 @@
+use bevy::utils::HashMap;
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_ggrs::ggrs::{InputStatus, PlayerHandle};
-use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback, Session};
+use bevy_ggrs::ggrs::InputStatus;
+use bevy_ggrs::{AddRollbackCommandExtension, LocalInputs, LocalPlayers, PlayerInputs, Rollback, Session};
 use bytemuck::{Pod, Zeroable};
 
 use crate::{
     checksum::Checksum,
-    menu::{connect::LocalHandles, win::MatchData},
+    menu::win::MatchData,
     AppState, GGRSConfig, NUM_PLAYERS,
 };
 
@@ -58,43 +59,48 @@ pub struct FrameCount {
     pub frame: u32,
 }
 
-pub fn input(
-    handle: In<PlayerHandle>,
-    keyboard_input: Res<bevy::input::Input<KeyCode>>,
-    local_handles: Res<LocalHandles>,
-) -> Input {
-    let mut inp: u8 = 0;
+pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_input: Res<bevy::prelude::Input<KeyCode>>) {
+    let local_players = &local_players.0;
+    let mut local_inputs = HashMap::new();
 
-    if handle.0 == local_handles.handles[0] {
-        if keyboard_input.pressed(KeyCode::W) {
-            inp |= INPUT_UP;
+    for handle in local_players.iter() {
+        let local = local_players.len() > 1;
+        let mut input = 0;
+
+        if !local || *handle == 0 {
+            if keyboard_input.pressed(KeyCode::W) {
+                input |= INPUT_UP;
+            }
+            if keyboard_input.pressed(KeyCode::A) {
+                input |= INPUT_LEFT;
+            }
+            if keyboard_input.pressed(KeyCode::S) {
+                input |= INPUT_DOWN;
+            }
+            if keyboard_input.pressed(KeyCode::D) {
+                input |= INPUT_RIGHT;
+            }
+        } else {
+            if keyboard_input.pressed(KeyCode::Up) {
+                input |= INPUT_UP;
+            }
+            if keyboard_input.pressed(KeyCode::Left) {
+                input |= INPUT_LEFT;
+            }
+            if keyboard_input.pressed(KeyCode::Down) {
+                input |= INPUT_DOWN;
+            }
+            if keyboard_input.pressed(KeyCode::Right) {
+                input |= INPUT_RIGHT;
+            }
         }
-        if keyboard_input.pressed(KeyCode::A) {
-            inp |= INPUT_LEFT;
-        }
-        if keyboard_input.pressed(KeyCode::S) {
-            inp |= INPUT_DOWN;
-        }
-        if keyboard_input.pressed(KeyCode::D) {
-            inp |= INPUT_RIGHT;
-        }
-    } else {
-        if keyboard_input.pressed(KeyCode::Up) {
-            inp |= INPUT_UP;
-        }
-        if keyboard_input.pressed(KeyCode::Left) {
-            inp |= INPUT_LEFT;
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            inp |= INPUT_DOWN;
-        }
-        if keyboard_input.pressed(KeyCode::Right) {
-            inp |= INPUT_RIGHT;
-        }
+
+        local_inputs.insert(*handle, Input {inp: input });
     }
 
-    Input { inp }
+    commands.insert_resource(LocalInputs::<GGRSConfig>(local_inputs));
 }
+
 
 pub fn setup_round(mut commands: Commands) {
     println!("OH YEAH");
@@ -167,7 +173,7 @@ pub fn check_win(mut next_state: ResMut<NextState<AppState>>, mut commands: Comm
 
 pub fn cleanup(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) {
     commands.remove_resource::<FrameCount>();
-    commands.remove_resource::<LocalHandles>();
+    commands.remove_resource::<LocalPlayers>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
     for e in query.iter() {

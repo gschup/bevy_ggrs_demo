@@ -171,7 +171,7 @@ pub fn update_lobby_id(
     mut lobby_id: ResMut<LobbyID>,
 ) {
     let lid = &mut lobby_id.0;
-    for ev in char_evr.iter() {
+    for ev in char_evr.read() {
         if lid.len() < 4 && ev.char.is_ascii_digit() {
             lid.push(ev.char);
         }

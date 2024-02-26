@@ -3,6 +3,7 @@
 ## GGRS & Matchbox & Bevy Demo
 
 WIP, but basic functionality should work!
+You must run your own [matchbox_server](https://github.com/johanhelsing/matchbox/tree/main/matchbox_server) to emulate online matchmaking
 
 ## Licensing
 
