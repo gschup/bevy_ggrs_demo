@@ -1,9 +1,10 @@
 use bevy::utils::HashMap;
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_ggrs::ggrs::InputStatus;
-use bevy_ggrs::{AddRollbackCommandExtension, LocalInputs, LocalPlayers, PlayerInputs, Rollback, Session};
+use bevy_ggrs::{AddRollbackCommandExtension, GgrsTime, LocalInputs, LocalPlayers, PlayerInputs, Rollback, Session};
 use bytemuck::{Pod, Zeroable};
 
+use crate::{FontAssets, BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::{
     checksum::Checksum,
     menu::win::MatchData,
@@ -39,6 +40,14 @@ pub struct Input {
 #[derive(Default, Component)]
 pub struct Player {
     pub handle: usize,
+}
+
+#[derive(Component)]
+pub struct RoundUI;
+
+#[derive(Component)]
+pub enum RoundBtn {
+    Back,
 }
 
 #[derive(Component)]
@@ -100,7 +109,6 @@ pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_
 
     commands.insert_resource(LocalInputs::<GGRSConfig>(local_inputs));
 }
-
 
 pub fn setup_round(mut commands: Commands) {
     println!("OH YEAH");
@@ -176,6 +184,99 @@ pub fn cleanup(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) 
     commands.remove_resource::<LocalPlayers>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
+    // https://github.com/gschup/bevy_ggrs/issues/93 
+    commands.insert_resource(Time::new_with(GgrsTime::default()));
+
+    for e in query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+}
+
+/*
+ * UI
+ */
+
+pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
+    // root node
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                flex_direction: FlexDirection::ColumnReverse,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..Default::default()
+            },
+            background_color: Color::NONE.into(),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            // back button
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
+                        ..Default::default()
+                    },
+                    background_color: NORMAL_BUTTON.into(),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Back to Menu",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
+                })
+                .insert(RoundBtn::Back);
+        })
+        .insert(RoundUI);
+}
+
+pub fn btn_visuals(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<RoundBtn>),
+    >,
+) {
+    for (interaction, mut color) in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+pub fn btn_listeners(
+    mut state: ResMut<NextState<AppState>>,
+    mut interaction_query: Query<(&Interaction, &RoundBtn), Changed<Interaction>>,
+) {
+    for (interaction, btn) in interaction_query.iter_mut() {
+        if let Interaction::Pressed = *interaction {
+            match btn {
+                RoundBtn::Back => {
+                    state.set(AppState::MenuMain);
+                }
+            }
+        }
+    }
+}
+
+pub fn cleanup_ui(query: Query<Entity, With<RoundUI>>, mut commands: Commands) {
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }
