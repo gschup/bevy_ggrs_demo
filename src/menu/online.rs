@@ -167,7 +167,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
 
 pub fn update_lobby_id(
     mut char_evr: EventReader<ReceivedCharacter>,
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut lobby_id: ResMut<LobbyID>,
 ) {
     let lid = &mut lobby_id.0;
@@ -176,7 +176,7 @@ pub fn update_lobby_id(
             lid.push(ev.char);
         }
     }
-    if keys.just_pressed(KeyCode::Back) {
+    if keys.just_pressed(KeyCode::Backspace) {
         let mut chars = lid.chars();
         chars.next_back();
         *lid = chars.as_str().to_owned();
