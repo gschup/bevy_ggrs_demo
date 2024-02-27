@@ -1,13 +1,11 @@
 use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::ggrs::{PlayerType, SessionBuilder};
-use bevy_ggrs::Session;
+use bevy_ggrs::{LocalPlayers, Session};
 
 use crate::{
     AppState, FontAssets, GGRSConfig, ImageAssets, BUTTON_TEXT, CHECK_DISTANCE, FPS,
     HOVERED_BUTTON, INPUT_DELAY, MAX_PREDICTION, NORMAL_BUTTON, NUM_PLAYERS, PRESSED_BUTTON,
 };
-
-use super::connect::LocalHandles;
 
 #[derive(Component)]
 pub struct MenuMainUI;
@@ -192,6 +190,7 @@ fn create_synctest_session(commands: &mut Commands) {
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(NUM_PLAYERS)
         .with_max_prediction_window(MAX_PREDICTION)
+        .expect("Invalid prediction window")
         .with_fps(FPS)
         .expect("Invalid FPS")
         .with_input_delay(INPUT_DELAY)
@@ -206,7 +205,5 @@ fn create_synctest_session(commands: &mut Commands) {
     let sess = sess_build.start_synctest_session().expect("");
 
     commands.insert_resource(Session::SyncTest(sess));
-    commands.insert_resource(LocalHandles {
-        handles: (0..NUM_PLAYERS).collect(),
-    });
+    commands.insert_resource(LocalPlayers((0..NUM_PLAYERS).collect()));
 }

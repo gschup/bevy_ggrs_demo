@@ -5,7 +5,7 @@ mod round;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_ggrs::ggrs::Config;
-use bevy_ggrs::{GgrsPlugin, GgrsSchedule};
+use bevy_ggrs::{GgrsApp, GgrsPlugin, GgrsSchedule, ReadInputs};
 use bevy_matchbox::prelude::*;
 use checksum::{checksum_players, Checksum};
 use menu::{
@@ -13,8 +13,7 @@ use menu::{
     online::{update_lobby_btn, update_lobby_id, update_lobby_id_display},
 };
 use round::{
-    apply_inputs, check_win, increase_frame_count, move_players, print_p2p_events, setup_round,
-    spawn_players, update_velocity, FrameCount, Velocity,
+    apply_inputs, check_win, increase_frame_count, move_players, print_p2p_events, setup_round, spawn_players, update_velocity, FrameCount, Velocity
 };
 
 const NUM_PLAYERS: usize = 2;
@@ -64,23 +63,23 @@ impl Config for GGRSConfig {
 fn main() {
     let mut app = App::new();
 
-    GgrsPlugin::<GGRSConfig>::new()
-        .with_update_frequency(FPS)
-        .with_input_system(round::input)
-        .register_rollback_component::<Transform>()
-        .register_rollback_component::<Velocity>()
-        .register_rollback_component::<Checksum>()
-        .register_rollback_resource::<FrameCount>()
-        .build(&mut app);
-
     app.add_plugins(DefaultPlugins)
         .add_state::<AppState>()
         // asset loading
         .add_loading_state(
-            LoadingState::new(AppState::AssetLoading).continue_to_state(AppState::MenuMain),
+            LoadingState::new(AppState::AssetLoading)
+                .continue_to_state(AppState::MenuMain)
+                .load_collection::<FontAssets>()
+                .load_collection::<ImageAssets>(),
         )
-        .add_collection_to_loading_state::<_, ImageAssets>(AppState::AssetLoading)
-        .add_collection_to_loading_state::<_, FontAssets>(AppState::AssetLoading)
+        // ggrs plugin
+        .add_plugins(GgrsPlugin::<GGRSConfig>::default())
+        .set_rollback_schedule_fps(FPS)
+        .add_systems(ReadInputs,round::input)
+        .rollback_component_with_clone::<Transform>()
+        .rollback_component_with_reflect::<Velocity>()
+        .rollback_component_with_reflect::<Checksum>()
+        .rollback_resource_with_reflect::<FrameCount>()
         // rollback schedule
         .add_systems(
             GgrsSchedule,
@@ -141,16 +140,16 @@ fn main() {
         )
         .add_systems(OnExit(AppState::Win), menu::win::cleanup_ui)
         // local round
-        .add_systems(OnEnter(AppState::RoundLocal), (setup_round, spawn_players))
-        .add_systems(Update, check_win.run_if(in_state(AppState::RoundLocal)))
-        .add_systems(OnExit(AppState::RoundLocal), round::cleanup)
+        .add_systems(OnEnter(AppState::RoundLocal), (round::setup_ui, setup_round, spawn_players))
+        .add_systems(Update, (check_win, round::btn_visuals, round::btn_listeners).run_if(in_state(AppState::RoundLocal)))
+        .add_systems(OnExit(AppState::RoundLocal), (round::cleanup, round::cleanup_ui))
         // online round
-        .add_systems(OnEnter(AppState::RoundOnline), (setup_round, spawn_players))
+        .add_systems(OnEnter(AppState::RoundOnline), (round::setup_ui, setup_round, spawn_players))
         .add_systems(
             Update,
-            (check_win, print_p2p_events).run_if(in_state(AppState::RoundOnline)),
+            (check_win, print_p2p_events, round::btn_visuals, round::btn_listeners).run_if(in_state(AppState::RoundOnline)),
         )
-        .add_systems(OnExit(AppState::RoundOnline), round::cleanup);
+        .add_systems(OnExit(AppState::RoundOnline), (round::cleanup, round::cleanup_ui));
 
     app.run();
 }

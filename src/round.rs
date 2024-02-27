@@ -1,11 +1,13 @@
+use bevy::utils::HashMap;
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_ggrs::ggrs::{InputStatus, PlayerHandle};
-use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, Rollback, Session};
+use bevy_ggrs::ggrs::InputStatus;
+use bevy_ggrs::{AddRollbackCommandExtension, GgrsTime, LocalInputs, LocalPlayers, PlayerInputs, Rollback, Session};
 use bytemuck::{Pod, Zeroable};
 
+use crate::{FontAssets, BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::{
     checksum::Checksum,
-    menu::{connect::LocalHandles, win::MatchData},
+    menu::win::MatchData,
     AppState, GGRSConfig, NUM_PLAYERS,
 };
 
@@ -41,6 +43,14 @@ pub struct Player {
 }
 
 #[derive(Component)]
+pub struct RoundUI;
+
+#[derive(Component)]
+pub enum RoundBtn {
+    Back,
+}
+
+#[derive(Component)]
 pub struct RoundEntity;
 
 #[derive(Default, Reflect, Component)]
@@ -58,42 +68,46 @@ pub struct FrameCount {
     pub frame: u32,
 }
 
-pub fn input(
-    handle: In<PlayerHandle>,
-    keyboard_input: Res<bevy::input::Input<KeyCode>>,
-    local_handles: Res<LocalHandles>,
-) -> Input {
-    let mut inp: u8 = 0;
+pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_input: Res<bevy::prelude::Input<KeyCode>>) {
+    let local_players = &local_players.0;
+    let mut local_inputs = HashMap::new();
 
-    if handle.0 == local_handles.handles[0] {
-        if keyboard_input.pressed(KeyCode::W) {
-            inp |= INPUT_UP;
+    for handle in local_players.iter() {
+        let local = local_players.len() > 1;
+        let mut input = 0;
+
+        if !local || *handle == 0 {
+            if keyboard_input.pressed(KeyCode::W) {
+                input |= INPUT_UP;
+            }
+            if keyboard_input.pressed(KeyCode::A) {
+                input |= INPUT_LEFT;
+            }
+            if keyboard_input.pressed(KeyCode::S) {
+                input |= INPUT_DOWN;
+            }
+            if keyboard_input.pressed(KeyCode::D) {
+                input |= INPUT_RIGHT;
+            }
+        } else {
+            if keyboard_input.pressed(KeyCode::Up) {
+                input |= INPUT_UP;
+            }
+            if keyboard_input.pressed(KeyCode::Left) {
+                input |= INPUT_LEFT;
+            }
+            if keyboard_input.pressed(KeyCode::Down) {
+                input |= INPUT_DOWN;
+            }
+            if keyboard_input.pressed(KeyCode::Right) {
+                input |= INPUT_RIGHT;
+            }
         }
-        if keyboard_input.pressed(KeyCode::A) {
-            inp |= INPUT_LEFT;
-        }
-        if keyboard_input.pressed(KeyCode::S) {
-            inp |= INPUT_DOWN;
-        }
-        if keyboard_input.pressed(KeyCode::D) {
-            inp |= INPUT_RIGHT;
-        }
-    } else {
-        if keyboard_input.pressed(KeyCode::Up) {
-            inp |= INPUT_UP;
-        }
-        if keyboard_input.pressed(KeyCode::Left) {
-            inp |= INPUT_LEFT;
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            inp |= INPUT_DOWN;
-        }
-        if keyboard_input.pressed(KeyCode::Right) {
-            inp |= INPUT_RIGHT;
-        }
+
+        local_inputs.insert(*handle, Input {inp: input });
     }
 
-    Input { inp }
+    commands.insert_resource(LocalInputs::<GGRSConfig>(local_inputs));
 }
 
 pub fn setup_round(mut commands: Commands) {
@@ -167,9 +181,102 @@ pub fn check_win(mut next_state: ResMut<NextState<AppState>>, mut commands: Comm
 
 pub fn cleanup(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) {
     commands.remove_resource::<FrameCount>();
-    commands.remove_resource::<LocalHandles>();
+    commands.remove_resource::<LocalPlayers>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
+    // https://github.com/gschup/bevy_ggrs/issues/93 
+    commands.insert_resource(Time::new_with(GgrsTime::default()));
+
+    for e in query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+}
+
+/*
+ * UI
+ */
+
+pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
+    // root node
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                flex_direction: FlexDirection::ColumnReverse,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..Default::default()
+            },
+            background_color: Color::NONE.into(),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            // back button
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
+                        ..Default::default()
+                    },
+                    background_color: NORMAL_BUTTON.into(),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Back to Menu",
+                        TextStyle {
+                            font: font_assets.default_font.clone(),
+                            font_size: 40.0,
+                            color: BUTTON_TEXT,
+                        },
+                    ));
+                })
+                .insert(RoundBtn::Back);
+        })
+        .insert(RoundUI);
+}
+
+pub fn btn_visuals(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<RoundBtn>),
+    >,
+) {
+    for (interaction, mut color) in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = PRESSED_BUTTON.into();
+            }
+            Interaction::Hovered => {
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+pub fn btn_listeners(
+    mut state: ResMut<NextState<AppState>>,
+    mut interaction_query: Query<(&Interaction, &RoundBtn), Changed<Interaction>>,
+) {
+    for (interaction, btn) in interaction_query.iter_mut() {
+        if let Interaction::Pressed = *interaction {
+            match btn {
+                RoundBtn::Back => {
+                    state.set(AppState::MenuMain);
+                }
+            }
+        }
+    }
+}
+
+pub fn cleanup_ui(query: Query<Entity, With<RoundUI>>, mut commands: Commands) {
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }
