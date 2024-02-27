@@ -68,7 +68,7 @@ pub struct FrameCount {
     pub frame: u32,
 }
 
-pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_input: Res<bevy::prelude::Input<KeyCode>>) {
+pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_input: Res<bevy::prelude::ButtonInput<KeyCode>>) {
     let local_players = &local_players.0;
     let mut local_inputs = HashMap::new();
 
@@ -77,29 +77,29 @@ pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_
         let mut input = 0;
 
         if !local || *handle == 0 {
-            if keyboard_input.pressed(KeyCode::W) {
+            if keyboard_input.pressed(KeyCode::KeyW) {
                 input |= INPUT_UP;
             }
-            if keyboard_input.pressed(KeyCode::A) {
+            if keyboard_input.pressed(KeyCode::KeyA) {
                 input |= INPUT_LEFT;
             }
-            if keyboard_input.pressed(KeyCode::S) {
+            if keyboard_input.pressed(KeyCode::KeyS) {
                 input |= INPUT_DOWN;
             }
-            if keyboard_input.pressed(KeyCode::D) {
+            if keyboard_input.pressed(KeyCode::KeyD) {
                 input |= INPUT_RIGHT;
             }
         } else {
-            if keyboard_input.pressed(KeyCode::Up) {
+            if keyboard_input.pressed(KeyCode::ArrowUp) {
                 input |= INPUT_UP;
             }
-            if keyboard_input.pressed(KeyCode::Left) {
+            if keyboard_input.pressed(KeyCode::ArrowLeft) {
                 input |= INPUT_LEFT;
             }
-            if keyboard_input.pressed(KeyCode::Down) {
+            if keyboard_input.pressed(KeyCode::ArrowDown) {
                 input |= INPUT_DOWN;
             }
-            if keyboard_input.pressed(KeyCode::Right) {
+            if keyboard_input.pressed(KeyCode::ArrowRight) {
                 input |= INPUT_RIGHT;
             }
         }
