@@ -82,7 +82,7 @@ pub fn update_matchbox_socket(
 
 pub fn cleanup(mut _commands: Commands) {
     // FIXME: Removing MatchboxSocket crashes the game
-    // commands.remove_resource::<MatchboxSocket<SingleChannel>>();
+    // _commands.remove_resource::<MatchboxSocket<SingleChannel>>();
 }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {

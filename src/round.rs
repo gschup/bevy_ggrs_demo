@@ -68,7 +68,7 @@ pub struct FrameCount {
     pub frame: u32,
 }
 
-pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_input: Res<bevy::prelude::Input<KeyCode>>) {
+pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_input: Res<ButtonInput<KeyCode>>) {
     let local_players = &local_players.0;
     let mut local_inputs = HashMap::new();
 
@@ -77,34 +77,34 @@ pub fn input(mut commands: Commands, local_players: Res<LocalPlayers>, keyboard_
         let mut input = 0;
 
         if !local || *handle == 0 {
-            if keyboard_input.pressed(KeyCode::W) {
+            if keyboard_input.pressed(KeyCode::ArrowUp) {
                 input |= INPUT_UP;
             }
-            if keyboard_input.pressed(KeyCode::A) {
+            if keyboard_input.pressed(KeyCode::ArrowLeft) {
                 input |= INPUT_LEFT;
             }
-            if keyboard_input.pressed(KeyCode::S) {
+            if keyboard_input.pressed(KeyCode::ArrowDown) {
                 input |= INPUT_DOWN;
             }
-            if keyboard_input.pressed(KeyCode::D) {
+            if keyboard_input.pressed(KeyCode::ArrowRight) {
                 input |= INPUT_RIGHT;
             }
         } else {
-            if keyboard_input.pressed(KeyCode::Up) {
+            if keyboard_input.pressed(KeyCode::KeyW) {
                 input |= INPUT_UP;
             }
-            if keyboard_input.pressed(KeyCode::Left) {
+            if keyboard_input.pressed(KeyCode::KeyA) {
                 input |= INPUT_LEFT;
             }
-            if keyboard_input.pressed(KeyCode::Down) {
+            if keyboard_input.pressed(KeyCode::KeyS) {
                 input |= INPUT_DOWN;
             }
-            if keyboard_input.pressed(KeyCode::Right) {
+            if keyboard_input.pressed(KeyCode::KeyD) {
                 input |= INPUT_RIGHT;
             }
         }
 
-        local_inputs.insert(*handle, Input {inp: input });
+        local_inputs.insert(*handle, Input { inp: input });
     }
 
     commands.insert_resource(LocalInputs::<GGRSConfig>(local_inputs));
@@ -140,15 +140,37 @@ pub fn spawn_players(mut commands: Commands) {
         let mut transform = Transform::from_translation(Vec3::new(x, y, 1.));
         transform.rotate(Quat::from_rotation_z(rot));
 
+        // Create our player (a nice simple car)
         commands
             .spawn(SpriteBundle {
-                transform,
                 sprite: Sprite {
                     color: PLAYER_COLORS[handle],
                     custom_size: Some(Vec2::new(PLAYER_SIZE * 0.5, PLAYER_SIZE)),
                     ..Default::default()
                 },
+                transform,
                 ..Default::default()
+            })
+            .with_children(|c| {
+                // Create two nice headlights for our car to know where it's facing
+                let size = Vec2::new(8.0, 4.0);
+                for i in [-1.0, 1.0] {
+                    c.spawn(SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::YELLOW,
+                            custom_size: Some(size),
+                            ..Default::default()
+                        },
+                        transform: Transform::from_translation(
+                            Vec2::new(
+                                (i * PLAYER_SIZE / 4.0) - (i * size.x / 2.0),
+                                (PLAYER_SIZE / 2.0) - (size.y / 2.0),
+                            )
+                            .extend(1.0),
+                        ),
+                        ..Default::default()
+                    });
+                }
             })
             .insert(Player { handle })
             .insert(Velocity::default())
@@ -184,7 +206,7 @@ pub fn cleanup(query: Query<Entity, With<RoundEntity>>, mut commands: Commands) 
     commands.remove_resource::<LocalPlayers>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
-    // https://github.com/gschup/bevy_ggrs/issues/93 
+    // https://github.com/gschup/bevy_ggrs/issues/93
     commands.insert_resource(Time::new_with(GgrsTime::default()));
 
     for e in query.iter() {
