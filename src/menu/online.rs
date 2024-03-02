@@ -23,7 +23,7 @@ pub struct ButtonEnabled(bool);
 #[derive(Component)]
 pub struct LobbyCodeText;
 
-#[derive(Resource)]
+#[derive(Deref, DerefMut, Resource)]
 pub struct LobbyID(String);
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
@@ -38,7 +38,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     commands
         .spawn(NodeBundle {
             style: Style {
-                flex_direction: FlexDirection::ColumnReverse, 
+                flex_direction: FlexDirection::ColumnReverse,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
                 ..Default::default()
@@ -167,19 +167,19 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
 
 pub fn update_lobby_id(
     mut char_evr: EventReader<ReceivedCharacter>,
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut lobby_id: ResMut<LobbyID>,
 ) {
-    let lid = &mut lobby_id.0;
-    for ev in char_evr.read() {
-        if lid.len() < 4 && ev.char.is_ascii_digit() {
-            lid.push(ev.char);
-        }
+    if keys.just_pressed(KeyCode::Backspace) {
+        lobby_id.pop();
+        return;
     }
-    if keys.just_pressed(KeyCode::Back) {
-        let mut chars = lid.chars();
-        chars.next_back();
-        *lid = chars.as_str().to_owned();
+    for ev in char_evr.read() {
+        for c in ev.char.chars() {
+            if lobby_id.len() < 4 && c.is_ascii_digit() {
+                lobby_id.push(c);
+            }
+        }
     }
 }
 

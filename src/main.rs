@@ -64,7 +64,7 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(DefaultPlugins)
-        .add_state::<AppState>()
+        .init_state::<AppState>()
         // asset loading
         .add_loading_state(
             LoadingState::new(AppState::AssetLoading)
